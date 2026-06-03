@@ -26,9 +26,11 @@ EXAMPLES = os.path.join(ROOT, "examples")
 TARGET = os.path.join(EXAMPLES, "straight_target.wav")
 AMEN = os.path.join(EXAMPLES, "amen.wav")
 GOOGLE = json.load(open(os.path.join(EXAMPLES, "groove_library.json")))
-USER_PATH = os.path.join(EXAMPLES, "user_grooves.json")
+# Cache / user-data paths are env-overridable so hosts (e.g. Hugging Face
+# Spaces, where the app dir is read-only) can point them at a writable dir.
+USER_PATH = os.environ.get("MGM_USER", os.path.join(EXAMPLES, "user_grooves.json"))
 USER = json.load(open(USER_PATH)) if os.path.exists(USER_PATH) else []
-CACHE = os.path.join(EXAMPLES, "_cache")
+CACHE = os.environ.get("MGM_CACHE", os.path.join(EXAMPLES, "_cache"))
 os.makedirs(CACHE, exist_ok=True)
 
 # Named raw audio the UI can play directly (unmodified).
