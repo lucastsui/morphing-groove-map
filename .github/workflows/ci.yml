@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Build & test (MGMKit + app)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show / select Xcode
+        run: |
+          xcodebuild -version
+          # Prefer the newest installed Xcode (the app needs the iOS 26 SDK).
+          latest=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$latest" ] && sudo xcode-select -s "$latest/Contents/Developer"
+          swift --version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Run full test suite
+        run: ./run_tests.sh

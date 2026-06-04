@@ -1,0 +1,81 @@
+# XcodeGen spec -> generates GroovePlayer.xcodeproj (no Xcode needed to GENERATE;
+# Xcode is needed to BUILD/RUN). Regenerate with:
+#   xcodegen generate --spec GroovePlayer/project.yml --project GroovePlayer
+name: GroovePlayer
+options:
+  bundleIdPrefix: com.lucastsui
+  deploymentTarget:
+    iOS: "16.0"
+
+packages:
+  MGMKit:
+    path: ../MGMKit
+
+targets:
+  GroovePlayer:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - Sources
+      - Resources   # non-code files here become Copy-Bundle-Resources automatically
+    dependencies:
+      - package: MGMKit
+        product: MGMKit
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: Groove Player
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UIDeviceFamily: [1, 2]   # iPhone + iPad
+    settings:
+      base:
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: NO
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+
+  # Unit tests for the app model (Store), hosted by the app so @testable works.
+  GroovePlayerTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - Tests
+    dependencies:
+      - target: GroovePlayer
+      - package: MGMKit
+        product: MGMKit
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+
+  # UI tests driving the SwiftUI app on a simulator.
+  GroovePlayerUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - UITests
+    dependencies:
+      - target: GroovePlayer
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  GroovePlayer:
+    build:
+      targets:
+        GroovePlayer: all
+        GroovePlayerTests: [test]
+        GroovePlayerUITests: [test]
+    test:
+      gatherCoverageData: true
+      targets:
+        - GroovePlayerTests
+        - GroovePlayerUITests
