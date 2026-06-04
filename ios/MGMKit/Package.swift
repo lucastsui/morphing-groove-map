@@ -7,7 +7,7 @@ import PackageDescription
 
 let package = Package(
     name: "MGMKit",
-    platforms: [.macOS(.v12), .iOS(.v15)],
+    platforms: [.macOS(.v12), .iOS(.v16)],
     products: [
         .library(name: "MGMKit", targets: ["MGMKit"]),
         .executable(name: "MGMValidate", targets: ["MGMValidate"]),

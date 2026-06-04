@@ -4,7 +4,7 @@ name: GroovePlayer
 options:
   bundleIdPrefix: com.lucastsui
   deploymentTarget:
-    iOS: "15.0"
+    iOS: "16.0"
 
 packages:
   MGMKit:
@@ -14,7 +14,7 @@ targets:
   GroovePlayer:
     type: application
     platform: iOS
-    deploymentTarget: "15.0"
+    deploymentTarget: "16.0"
     sources:
       - Sources
     resources:
