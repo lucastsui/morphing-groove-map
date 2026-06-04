@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0B49BD178531D7E921EECD51 /* amen.wav in Resources */ = {isa = PBXBuildFile; fileRef = B1B824CA8338CFBF8C87FF82 /* amen.wav */; };
+		10222A13B11097532760642A /* straight_target.wav in Resources */ = {isa = PBXBuildFile; fileRef = 5FB2B9E9CD86A2C947419DF5 /* straight_target.wav */; };
+		10593D57FC3B2A6D37F0E684 /* groove_library.json in Resources */ = {isa = PBXBuildFile; fileRef = 4491F74801CF24797ABA9D80 /* groove_library.json */; };
 		3E9E536ABC0E13369B8BE9E4 /* AudioEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03E800A5EF2773135A8E94DF /* AudioEngine.swift */; };
 		4BA94FD98D07958346A7AC77 /* GroovePlayerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF3686C236103DCCD4423755 /* GroovePlayerApp.swift */; };
 		740CDEC1F7FAD8BE9C3F6318 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EA8F3F638D1889B2FE1A8D2 /* ContentView.swift */; };
@@ -17,7 +20,10 @@
 /* Begin PBXFileReference section */
 		03E800A5EF2773135A8E94DF /* AudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEngine.swift; sourceTree = "<group>"; };
 		3EA8F3F638D1889B2FE1A8D2 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		4491F74801CF24797ABA9D80 /* groove_library.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = groove_library.json; sourceTree = "<group>"; };
+		5FB2B9E9CD86A2C947419DF5 /* straight_target.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = straight_target.wav; sourceTree = "<group>"; };
 		6BCC4B78F075C08E4E76D261 /* MGMKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = MGMKit; path = ../MGMKit; sourceTree = SOURCE_ROOT; };
+		B1B824CA8338CFBF8C87FF82 /* amen.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = amen.wav; sourceTree = "<group>"; };
 		B884F8BFA85F90A3A569B8FA /* Store.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Store.swift; sourceTree = "<group>"; };
 		CB6A98B7D0417CE847CD143A /* GroovePlayer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GroovePlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DF3686C236103DCCD4423755 /* GroovePlayerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroovePlayerApp.swift; sourceTree = "<group>"; };
@@ -39,6 +45,7 @@
 			isa = PBXGroup;
 			children = (
 				7DD1384E63BDAD43D4D27DB6 /* Packages */,
+				98E406D710F9CE6E7B75E5A3 /* Resources */,
 				74987F160838EA0CC96F3C36 /* Sources */,
 				6908D38D48CD0689C981D2F7 /* Products */,
 			);
@@ -71,6 +78,16 @@
 			name = Packages;
 			sourceTree = "<group>";
 		};
+		98E406D710F9CE6E7B75E5A3 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				B1B824CA8338CFBF8C87FF82 /* amen.wav */,
+				4491F74801CF24797ABA9D80 /* groove_library.json */,
+				5FB2B9E9CD86A2C947419DF5 /* straight_target.wav */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -79,6 +96,7 @@
 			buildConfigurationList = 1051C11935DEBCF4A93757B4 /* Build configuration list for PBXNativeTarget "GroovePlayer" */;
 			buildPhases = (
 				C4A6F8C88C9465274C7EFC3D /* Sources */,
+				D0D3EDBF92AA05E9DBC21BBD /* Resources */,
 				0544612D60AB58BFE74997E4 /* Frameworks */,
 			);
 			buildRules = (
@@ -125,6 +143,19 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D0D3EDBF92AA05E9DBC21BBD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0B49BD178531D7E921EECD51 /* amen.wav in Resources */,
+				10593D57FC3B2A6D37F0E684 /* groove_library.json in Resources */,
+				10222A13B11097532760642A /* straight_target.wav in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		C4A6F8C88C9465274C7EFC3D /* Sources */ = {
