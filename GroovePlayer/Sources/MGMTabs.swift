@@ -33,7 +33,9 @@ struct MGMView: View {
                         if pos != 0 {
                             Button(role: .destructive) {
                                 store.slotGroove[pos] = nil; store.slotName[pos] = nil
-                            } label: { Image(systemName: "trash") }.buttonStyle(.borderless)
+                            } label: { Image(systemName: "trash") }
+                            .buttonStyle(.borderless)
+                            .accessibilityIdentifier("deleteSlot")
                         }
                     }
                 }
@@ -43,6 +45,7 @@ struct MGMView: View {
                     IntBox(value: $newSlot)
                     Button { store.assignCurrentToSlot(newSlot) } label: { Image(systemName: "plus") }
                         .buttonStyle(.borderedProminent)
+                        .accessibilityIdentifier("addToSlot")
                 }
 
                 Text(store.status).font(.footnote).foregroundStyle(.secondary)
