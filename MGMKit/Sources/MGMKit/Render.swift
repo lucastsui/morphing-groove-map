@@ -38,13 +38,16 @@ public enum Render {
     /// detected from the audio. Returns the new mono buffer.
     public static func grooved(target y: [Float], sampleRate sr: Int,
                                groove: Groove, xfade: Int = 64,
-                               tempoBpm: Double? = nil) -> [Float] {
+                               tempoBpm: Double? = nil, percussive: Bool = false) -> [Float] {
         guard !y.isEmpty, !groove.timing.isEmpty else { return y }
         precondition(groove.unit != .bf || tempoBpm != nil,
                      "tempoBpm is required to render a beat-fraction (bf) groove")
 
-        // 1. detect onsets (sample indices), always including the start
-        var onsets = Onset.accurateOnsetTimes(y, sampleRate: sr).map { Int($0 * Double(sr)) }
+        // 1. detect onsets (sample indices), always including the start. For a
+        //    full mix, `percussive` locks re-timing to drum transients (HPSS).
+        let onsetTimes = percussive ? SongAnalyzer.percussiveOnsetTimes(y, sampleRate: sr)
+                                    : Onset.accurateOnsetTimes(y, sampleRate: sr)
+        var onsets = onsetTimes.map { Int($0 * Double(sr)) }
         if onsets.first != 0 { onsets.insert(0, at: 0) }
         onsets.append(y.count)  // sentinel end boundary
 

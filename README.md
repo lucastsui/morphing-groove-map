@@ -76,7 +76,8 @@ All seven items from the use-case spec are implemented in MGMKit and verified by
 | `MGMIO.swift` | read/write the `.stt` (single template) and `.mgm` (morphing map) JSON file formats |
 | `Onset.swift` | vDSP onset detection + per-slot **timing & velocity** extraction (ms / samples / bf) |
 | `MIDIImport.swift` | parse a Standard MIDI File → `Groove` (timing + velocity) |
-| `Render.swift` | slice / shift / overlap-add a groove onto target audio |
+| `SongAnalyzer.swift` | **full-song** swing analysis: median-filter HPSS (percussive emphasis) + tempo/beat tracking → one representative bar + confidence |
+| `Render.swift` | slice / shift / overlap-add a groove onto target audio (`percussive:` locks re-timing to drum transients for full mixes) |
 | `Library.swift` | load the bundled `groove_library.json` (35 grooves from the Google Groove MIDI Dataset) |
 
 ## Verify the core without Xcode (Command Line Tools is enough)
@@ -122,6 +123,11 @@ developer cert on the iPad under Settings → General → VPN & Device Managemen
 - **Analyze the Amen break** on-device into your own swing file (vDSP onset detection).
 - Dial swing 0–127 and **play** the target loop with the groove stamped on —
   rendered natively.
+- **Analyze a full song → apply to another** (Generate tab): import any audio
+  file; on-device HPSS + beat-tracking extract a representative one-bar groove
+  (with a confidence score); set a second song as the apply target and stamp the
+  swing on with percussive re-timing. Best on drum-forward material — dense /
+  ballad mixes are rough (no on-device source separation).
 
 ## Example (MGMKit)
 

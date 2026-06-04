@@ -29,13 +29,23 @@ final class AudioEngine: ObservableObject {
     func loadMono(_ resource: String) -> (samples: [Float], sr: Int)? {
         guard let url = Bundle.main.url(forResource: resource, withExtension: "wav"),
               let file = try? AVAudioFile(forReading: url) else { return nil }
+        return mono(from: file)
+    }
+
+    /// Load any audio file (wav / mp3 / m4a / aiff …) into mono [Float] + rate.
+    func loadMono(url: URL) -> (samples: [Float], sr: Int)? {
+        guard let file = try? AVAudioFile(forReading: url) else { return nil }
+        return mono(from: file)
+    }
+
+    private func mono(from file: AVAudioFile) -> (samples: [Float], sr: Int)? {
         let fmt = file.processingFormat
         let frames = AVAudioFrameCount(file.length)
-        guard let buf = AVAudioPCMBuffer(pcmFormat: fmt, frameCapacity: frames),
+        guard frames > 0,
+              let buf = AVAudioPCMBuffer(pcmFormat: fmt, frameCapacity: frames),
               (try? file.read(into: buf)) != nil,
               let ch = buf.floatChannelData else { return nil }
         let n = Int(buf.frameLength)
-        // average channels down to mono
         var mono = [Float](repeating: 0, count: n)
         let chans = Int(fmt.channelCount)
         for c in 0..<chans {

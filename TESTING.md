@@ -6,8 +6,8 @@ last two run the **GroovePlayer** iPad app on a simulator.
 | Tier | What it covers | Command | Count |
 |---|---|---|---|
 | **0 — smoke** | `MGMValidate` CLI: morph, bf/triplets, files, extraction, render | `swift run --package-path MGMKit MGMValidate` | ~31 checks |
-| **1 — engine** | MGMKit units/grid/morph/document/IO/onset/MIDI + fuzz | `swift test --package-path MGMKit` | 45 tests |
-| **2 — app model** | `Store`: fbu/ms/note steps, grid, slots, file I/O, MIDI import | `xcodebuild test … -only-testing:GroovePlayerTests` | 8 tests |
+| **1 — engine** | MGMKit units/grid/morph/document/IO/onset/MIDI + fuzz + **SongAnalyzer** (HPSS/beat-track/swing) | `swift test --package-path MGMKit` | 48 tests |
+| **2 — app model** | `Store`: fbu/ms/note steps, grid, slots, file I/O, MIDI import, **full-song analyze→apply** | `xcodebuild test … -only-testing:GroovePlayerTests` | 9 tests |
 | **3 — UI** | XCUITest: tab nav, MIDI toggle, Edit-gating, .MGM slots | `xcodebuild test … -only-testing:GroovePlayerUITests` | 4 tests |
 
 ## Prerequisites
@@ -58,6 +58,65 @@ xcrun xccov view --report /tmp/gp_dd/Logs/Test/*.xcresult
 - **Library**: `groove_library.json` decode + conversion.
 - **Store** (app model): fbu/ms/note step math + clamp, `resizeLanes`, `gridValid` truth table, `currentGroove`, slot assignment, `.stt` save/load, MIDI import, MIDI 1.0/2.0 velocity range.
 - **UI**: 5-tab navigation, MIDI toggle updates the velocity-range text, **Edit** gates the step buttons, `.MGM` shows the seeded slots.
+
+## UI button reference (expected behavior)
+
+Every interactive control, what it should do, and how it's verified
+(✅ automated test · 👁 manual emulator check).
+
+### Shared — file header (`.STT beats`, `.MGM`)
+| Button | Expected behavior | Verified |
+|---|---|---|
+| **Load** | Opens the system file picker (`.stt`/`.mgm`); choosing a file loads it into the current template/map | 👁 |
+| **Edit** | Toggles edit mode (label → "Editing"); enables that tab's editing controls | ✅ |
+| **Save** | Writes the current `.STT`/`.MGM` to the app's Documents folder; status shows the filename | ✅ |
+| **Rename** | Toggles an inline text field to rename the file (label → "Done") | 👁 |
+
+### Welcome
+| Control | Expected behavior | Verified |
+|---|---|---|
+| **MIDI 1.0 / MIDI 2.0** | Switches velocity precision; the "Velocity range 0–127 / 0–65535" line updates | ✅ |
+
+### `.STT full` (display-only)
+| Control | Expected behavior | Verified |
+|---|---|---|
+| **Load / Save / Rename** | File management as above — **no Edit** (this tab is display-only) | 👁 |
+| per-beat cells | Display only (fbu / ms / note + velocity / gate) | ✅ |
+
+### `.STT beats`
+| Control | Expected behavior | Verified |
+|---|---|---|
+| **beat marks** (timeline) | Select that beat; the fbu/ms/note readouts update to its offset | ✅ |
+| **fbu / ms / notes step buttons** | Nudge the selected beat's offset by that amount (Edit mode only); readouts update | ✅ |
+| **note-unit menu** | Chooses the note size the notes-row steps use | 👁 |
+| **Preview** | Renders the current groove onto the apply target and plays it | ✅ |
+| **Play target** | Plays the raw apply target | 👁 |
+
+### `.MGM`
+| Control | Expected behavior | Verified |
+|---|---|---|
+| **Edit** | Enables slot add/remove | 👁 |
+| **+** (add to slot) | Puts the current `.STT` into the typed slot (0–127); slot list + timeline update (Edit mode) | ✅ |
+| **trash** | Removes that slot (Edit mode) | ✅ |
+
+### Generate
+| Button | Expected behavior | Verified |
+|---|---|---|
+| **Run built-in demo** | Analyze bundled song A → show it → apply to song B → play | ✅ |
+| **Export .STT / .MGM** | Writes the current template/map to Documents; status confirms | ✅ |
+| **.STT / .MGM** (import) | Opens picker; loads the chosen file | 👁 |
+| **MIDI file** | Opens picker; imports a Standard MIDI File's groove | 👁 |
+| **Analyze Amen** | Extracts the bundled Amen break's groove into the current `.STT` | ✅ |
+| **Analyze song…** | Opens audio picker; extracts the chosen song's swing into the current `.STT` (+ report) | ✅ |
+| **Apply to song…** | Opens audio picker; sets the chosen song as the apply target | ✅ |
+| **Play current groove / Play target** | Render-and-play / play the raw target | ✅ |
+
+**Manual QA pass (iPad simulator):** every control above was exercised by hand.
+Four issues were found and fixed:
+- `.STT full` **Edit** — was a dead no-op on a display-only tab → **removed** (header is Load / Save / Rename only).
+- `.MGM` **Edit** — was inert (slots were always editable) → now **gates slot add/remove** (greyed with a "Tap Edit…" hint until Edit).
+- **Play target** — status was hard-coded "straight target" → now names the **actual** apply target.
+- Generate-tab **file pickers** (Analyze song… / Apply to song… / .STT·.MGM / MIDI) — **none opened**: four `.fileImporter` modifiers were stacked on one view (SwiftUI only honors one) → consolidated into a **single enum-driven importer**; all four pickers now present. (Hard to assert in XCUITest since the picker is a separate system process — a `👁` check.)
 
 ## Fixtures & helpers
 - `SplitMix64` — deterministic RNG for reproducible synthetic audio (in `MGMKitTests.swift`).

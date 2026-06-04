@@ -32,6 +32,14 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
         UIDeviceFamily: [1, 2]   # iPhone + iPad
+        UIFileSharingEnabled: true            # expose Documents in the Files app
+        LSSupportsOpeningDocumentsInPlace: true
+        # Allow plain-HTTP to the Spark on the LAN / tailnet (dev tool, no TLS).
+        # NSAllowsArbitraryLoads alone — do NOT add NSAllowsLocalNetworking, or
+        # iOS ignores arbitrary-loads and blocks the Tailscale (100.x) HTTP call.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+        NSLocalNetworkUsageDescription: Groove Player connects to your Spark analysis server on your local network / tailnet.
     settings:
       base:
         TARGETED_DEVICE_FAMILY: "1,2"

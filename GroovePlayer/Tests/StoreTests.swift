@@ -2,6 +2,7 @@
 // conversions, step buttons, lane resizing, grid validity, slot assignment, and
 // file load/save / MIDI import round-trips. Hosted by the app so `@testable`
 // can reach the internal types.
+import AVFoundation
 import XCTest
 import MGMKit
 @testable import GroovePlayer
@@ -104,5 +105,80 @@ final class StoreTests: XCTestCase {
               UInt8((len >> 24) & 0xFF), UInt8((len >> 16) & 0xFF), UInt8((len >> 8) & 0xFF), UInt8(len & 0xFF)]
         d += track
         return Data(d)
+    }
+
+    // MARK: full-song analyze A -> apply to B (end-to-end)
+
+    func testAnalyzeSongAndApplyToTarget() throws {
+        let s = makeStore()
+        let songA = try writeWav(synthLoop(offbeat: 0.63))
+        let songB = try writeWav(synthLoop(offbeat: 0.50))
+        defer {
+            try? FileManager.default.removeItem(at: songA)
+            try? FileManager.default.removeItem(at: songB)
+        }
+
+        // Apply target = song B (synchronous).
+        s.setRenderTarget(songB)
+        XCTAssertTrue(s.targetIsSong)
+        XCTAssertFalse(s.renderTargetName.isEmpty)
+
+        // Analyze song A (async) → wait for the report.
+        s.analyzeSong(songA)
+        waitUntil(timeout: 30) { s.lastReport != nil }
+        XCTAssertNotNil(s.lastReport)
+        XCTAssertEqual(s.timing.count, 16)
+        XCTAssertGreaterThan(s.lastReport?.tempoBPM ?? 0, 0)
+
+        // Apply (percussive re-time render) onto song B (async) → plays, no crash.
+        s.previewPlay()
+        waitUntil(timeout: 25) { s.status.contains("playing") }
+        XCTAssertTrue(s.status.contains("playing"))
+    }
+
+    private func waitUntil(timeout: TimeInterval, _ cond: () -> Bool) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !cond() && Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        }
+    }
+
+    private func synthLoop(offbeat: Double, bpm: Double = 120, seconds: Double = 4,
+                           sr: Double = 44100) -> [Float] {
+        let n = Int(seconds * sr)
+        var y = [Float](repeating: 0, count: n)
+        let beat = 60.0 / bpm
+        func burst(_ t: Double, _ amp: Float) {
+            let st = Int(t * sr), len = Int(0.02 * sr)
+            for k in 0..<len where st + k < n {
+                let env = Float(pow(1 - Double(k) / Double(len), 2))
+                y[st + k] += Float.random(in: -1...1) * env * amp
+            }
+        }
+        var b = 0.0
+        while b < seconds {
+            burst(b, 0.9)
+            let o = b + offbeat * beat
+            if o < seconds { burst(o, 0.5) }
+            b += beat
+        }
+        let pk = y.map { abs($0) }.max() ?? 1
+        if pk > 0 { for i in 0..<n { y[i] /= pk } }
+        return y
+    }
+
+    private func writeWav(_ samples: [Float], sr: Double = 44100) throws -> URL {
+        let fmt = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: sr,
+                                channels: 1, interleaved: false)!
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ut_\(UUID().uuidString).wav")
+        let file = try AVAudioFile(forWriting: url, settings: fmt.settings)
+        let buf = AVAudioPCMBuffer(pcmFormat: fmt, frameCapacity: AVAudioFrameCount(samples.count))!
+        buf.frameLength = AVAudioFrameCount(samples.count)
+        samples.withUnsafeBufferPointer {
+            buf.floatChannelData![0].update(from: $0.baseAddress!, count: samples.count)
+        }
+        try file.write(from: buf)
+        return url
     }
 }

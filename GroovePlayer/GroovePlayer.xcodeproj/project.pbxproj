@@ -7,18 +7,21 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0424454F66493B54DFE60FB9 /* straight_drums.wav in Resources */ = {isa = PBXBuildFile; fileRef = D0609FD72E1199D93EC525F7 /* straight_drums.wav */; };
 		0B49BD178531D7E921EECD51 /* amen.wav in Resources */ = {isa = PBXBuildFile; fileRef = B1B824CA8338CFBF8C87FF82 /* amen.wav */; };
-		10222A13B11097532760642A /* straight_target.wav in Resources */ = {isa = PBXBuildFile; fileRef = 5FB2B9E9CD86A2C947419DF5 /* straight_target.wav */; };
 		10593D57FC3B2A6D37F0E684 /* groove_library.json in Resources */ = {isa = PBXBuildFile; fileRef = 4491F74801CF24797ABA9D80 /* groove_library.json */; };
+		38A6CA937C02FD394620AE4B /* demoSongA.wav in Resources */ = {isa = PBXBuildFile; fileRef = 612DA09281E140656D1664F2 /* demoSongA.wav */; };
 		3E9E536ABC0E13369B8BE9E4 /* AudioEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03E800A5EF2773135A8E94DF /* AudioEngine.swift */; };
 		4BA94FD98D07958346A7AC77 /* GroovePlayerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF3686C236103DCCD4423755 /* GroovePlayerApp.swift */; };
 		70ADD8E9DCF4C988C9231C2F /* MGMKit in Frameworks */ = {isa = PBXBuildFile; productRef = 29D527B76E2A4F309DDB3B70 /* MGMKit */; };
 		740CDEC1F7FAD8BE9C3F6318 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EA8F3F638D1889B2FE1A8D2 /* ContentView.swift */; };
 		745CBE69BC2B77B25AE05D19 /* Store.swift in Sources */ = {isa = PBXBuildFile; fileRef = B884F8BFA85F90A3A569B8FA /* Store.swift */; };
 		8831053FF5A97CF32181C4BC /* AppUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D83A2CAB6DFB85CA7B923419 /* AppUITests.swift */; };
+		95653F2C840CADED491C6BE4 /* RemoteAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8D7B87279A1E2D53BA3A3E4 /* RemoteAnalyzer.swift */; };
 		9E40DFBF58824435A6E24988 /* MGMKit in Frameworks */ = {isa = PBXBuildFile; productRef = 629A2817D24B71B8B4D589E9 /* MGMKit */; };
 		C7334408B79088BA2B0F1633 /* STTTabs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DC3C57409BFB5369DB57924 /* STTTabs.swift */; };
 		D700D920C9DA444B4524ACD2 /* StoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E94F6ACDE769E52430A882EE /* StoreTests.swift */; };
+		E52FBCC0CBA3D9E2218DE3FB /* demoSongB.wav in Resources */ = {isa = PBXBuildFile; fileRef = AEEC452C464E56035AFFAAAE /* demoSongB.wav */; };
 		E6C516975257AA2104FD9956 /* MGMTabs.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDC7139A420A82917EA19F69 /* MGMTabs.swift */; };
 /* End PBXBuildFile section */
 
@@ -44,14 +47,17 @@
 		3DC3C57409BFB5369DB57924 /* STTTabs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = STTTabs.swift; sourceTree = "<group>"; };
 		3EA8F3F638D1889B2FE1A8D2 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		4491F74801CF24797ABA9D80 /* groove_library.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = groove_library.json; sourceTree = "<group>"; };
-		5FB2B9E9CD86A2C947419DF5 /* straight_target.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = straight_target.wav; sourceTree = "<group>"; };
+		612DA09281E140656D1664F2 /* demoSongA.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = demoSongA.wav; sourceTree = "<group>"; };
 		6BCC4B78F075C08E4E76D261 /* MGMKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = MGMKit; path = ../MGMKit; sourceTree = SOURCE_ROOT; };
 		9A2D615171E59BA93A6D0FD8 /* GroovePlayerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = GroovePlayerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A533BB44F7B4278C838D3BC0 /* GroovePlayerUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = GroovePlayerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A8D7B87279A1E2D53BA3A3E4 /* RemoteAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteAnalyzer.swift; sourceTree = "<group>"; };
+		AEEC452C464E56035AFFAAAE /* demoSongB.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = demoSongB.wav; sourceTree = "<group>"; };
 		B1B824CA8338CFBF8C87FF82 /* amen.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = amen.wav; sourceTree = "<group>"; };
 		B884F8BFA85F90A3A569B8FA /* Store.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Store.swift; sourceTree = "<group>"; };
 		CB6A98B7D0417CE847CD143A /* GroovePlayer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GroovePlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CDC7139A420A82917EA19F69 /* MGMTabs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MGMTabs.swift; sourceTree = "<group>"; };
+		D0609FD72E1199D93EC525F7 /* straight_drums.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = straight_drums.wav; sourceTree = "<group>"; };
 		D83A2CAB6DFB85CA7B923419 /* AppUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUITests.swift; sourceTree = "<group>"; };
 		DF3686C236103DCCD4423755 /* GroovePlayerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroovePlayerApp.swift; sourceTree = "<group>"; };
 		E94F6ACDE769E52430A882EE /* StoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreTests.swift; sourceTree = "<group>"; };
@@ -114,6 +120,7 @@
 				3EA8F3F638D1889B2FE1A8D2 /* ContentView.swift */,
 				DF3686C236103DCCD4423755 /* GroovePlayerApp.swift */,
 				CDC7139A420A82917EA19F69 /* MGMTabs.swift */,
+				A8D7B87279A1E2D53BA3A3E4 /* RemoteAnalyzer.swift */,
 				B884F8BFA85F90A3A569B8FA /* Store.swift */,
 				3DC3C57409BFB5369DB57924 /* STTTabs.swift */,
 			);
@@ -132,8 +139,10 @@
 			isa = PBXGroup;
 			children = (
 				B1B824CA8338CFBF8C87FF82 /* amen.wav */,
+				612DA09281E140656D1664F2 /* demoSongA.wav */,
+				AEEC452C464E56035AFFAAAE /* demoSongB.wav */,
 				4491F74801CF24797ABA9D80 /* groove_library.json */,
-				5FB2B9E9CD86A2C947419DF5 /* straight_target.wav */,
+				D0609FD72E1199D93EC525F7 /* straight_drums.wav */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -251,8 +260,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				0B49BD178531D7E921EECD51 /* amen.wav in Resources */,
+				38A6CA937C02FD394620AE4B /* demoSongA.wav in Resources */,
+				E52FBCC0CBA3D9E2218DE3FB /* demoSongB.wav in Resources */,
 				10593D57FC3B2A6D37F0E684 /* groove_library.json in Resources */,
-				10222A13B11097532760642A /* straight_target.wav in Resources */,
+				0424454F66493B54DFE60FB9 /* straight_drums.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -283,6 +294,7 @@
 				740CDEC1F7FAD8BE9C3F6318 /* ContentView.swift in Sources */,
 				4BA94FD98D07958346A7AC77 /* GroovePlayerApp.swift in Sources */,
 				E6C516975257AA2104FD9956 /* MGMTabs.swift in Sources */,
+				95653F2C840CADED491C6BE4 /* RemoteAnalyzer.swift in Sources */,
 				C7334408B79088BA2B0F1633 /* STTTabs.swift in Sources */,
 				745CBE69BC2B77B25AE05D19 /* Store.swift in Sources */,
 			);

@@ -6,10 +6,10 @@ import MGMKit
 
 struct ContentView: View {
     @StateObject private var store = Store(audio: AudioEngine())
-    @State private var sel = Int(ProcessInfo.processInfo.environment["TAB"] ?? "0") ?? 0
+    @State private var demoStarted = false
 
     var body: some View {
-        TabView(selection: $sel) {
+        TabView(selection: $store.tab) {
             WelcomeView().tabItem { Label("Welcome", systemImage: "house") }.tag(0)
             STTFullView().tabItem { Label(".STT full", systemImage: "list.bullet.rectangle") }.tag(1)
             STTBeatsView().tabItem { Label(".STT beats", systemImage: "slider.horizontal.3") }.tag(2)
@@ -17,6 +17,16 @@ struct ContentView: View {
             GenerateView().tabItem { Label("Generate", systemImage: "square.and.arrow.up.on.square") }.tag(4)
         }
         .environmentObject(store)
+        .onAppear {
+            if !demoStarted, ProcessInfo.processInfo.environment["DEMO"] == "1" {
+                demoStarted = true
+                store.runDemo()
+            }
+            if !demoStarted, ProcessInfo.processInfo.environment["SELFTEST"] == "1" {
+                demoStarted = true
+                store.runRemoteSelfTest()
+            }
+        }
     }
 }
 
@@ -60,6 +70,7 @@ struct FileHeader: View {
     @Binding var name: String
     let ext: String
     @Binding var editable: Bool
+    var showEdit: Bool = true
     var onLoad: () -> Void
     var onSave: () -> Void
     @State private var renaming = false
@@ -74,8 +85,10 @@ struct FileHeader: View {
             }
             Spacer()
             Button("Load", action: onLoad).buttonStyle(.bordered)
-            Button(editable ? "Editing" : "Edit") { editable.toggle() }
-                .buttonStyle(.bordered).tint(editable ? .green : nil)
+            if showEdit {
+                Button(editable ? "Editing" : "Edit") { editable.toggle() }
+                    .buttonStyle(.bordered).tint(editable ? .green : nil)
+            }
             Button("Save", action: onSave).buttonStyle(.bordered)
             Button(renaming ? "Done" : "Rename") { renaming.toggle() }.buttonStyle(.bordered)
         }

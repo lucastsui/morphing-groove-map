@@ -61,12 +61,28 @@ final class Store: ObservableObject {
 
     @Published var status = ""
 
+    // Full-song "apply target" (song B) + the last analysis report.
+    @Published var renderTargetName = "straight drums"
+    @Published var targetIsSong = false
+    @Published var lastReport: SongReport?
+    @Published var lastEngine = ""                 // "Spark · htdemucs+librosa" or "on-device"
+    @Published var tab = Int(ProcessInfo.processInfo.environment["TAB"] ?? "0") ?? 0
+
+    // Remote analysis (Spark) settings — persisted across launches.
+    @Published var useRemote = true { didSet { UserDefaults.standard.set(useRemote, forKey: "gp.useRemote") } }
+    @Published var serverURL = "http://100.73.106.98:8001" { didSet { UserDefaults.standard.set(serverURL, forKey: "gp.serverURL") } }
+
     let audio: AudioEngine
     private var target: (samples: [Float], sr: Int)?
 
     init(audio: AudioEngine) {
         self.audio = audio
-        target = audio.loadMono("straight_target")
+        // Restore persisted Spark settings (didSet does not fire inside init).
+        if let s = UserDefaults.standard.string(forKey: "gp.serverURL") { serverURL = s }
+        if UserDefaults.standard.object(forKey: "gp.useRemote") != nil {
+            useRemote = UserDefaults.standard.bool(forKey: "gp.useRemote")
+        }
+        target = audio.loadMono("straight_drums")
         resizeLanes()
         // Seed a light swing so the editor/overview show real data (off-beats
         // pushed +3072 fbu = 15.63 ms = a 1/64 beat at 60 BPM, per the sketch).
@@ -150,18 +166,25 @@ final class Store: ObservableObject {
     // MARK: source playback / preview
 
     func previewPlay() {
-        guard let t = target else { status = "straight_target.wav missing"; return }
+        guard let t = target else { status = "no apply target loaded"; return }
         guard gridValid else { status = "invalid grid: adjust time signature / beat resolution"; return }
-        let out = Render.grooved(target: t.samples, sampleRate: t.sr,
-                                 groove: currentGroove(), tempoBpm: tempoBPM)
-        audio.play(out, sr: t.sr, label: sttName)
-        status = "playing \(sttName) (\(beatResolution) slots, \(Int(tempoBPM)) bpm)"
+        let g = currentGroove(), bpm = tempoBPM, perc = targetIsSong
+        let name = sttName, res = beatResolution, targetName = renderTargetName
+        status = "rendering…"
+        Task.detached(priority: .userInitiated) {
+            let out = Render.grooved(target: t.samples, sampleRate: t.sr,
+                                     groove: g, tempoBpm: bpm, percussive: perc)
+            await MainActor.run {
+                self.audio.play(out, sr: t.sr, label: name)
+                self.status = "playing \(name) onto \(targetName) (\(res) slots, \(Int(bpm)) bpm)"
+            }
+        }
     }
 
     func playTarget() {
         guard let t = target else { status = "target missing"; return }
-        audio.play(t.samples, sr: t.sr, label: "straight target")
-        status = "playing straight target"
+        audio.play(t.samples, sr: t.sr, label: renderTargetName)
+        status = "playing \(renderTargetName)"
     }
 
     // MARK: extract (Generate tab)
@@ -184,6 +207,178 @@ final class Store: ObservableObject {
             tempoBPM = bpm
             loadGroove(g, name: url.deletingPathExtension().lastPathComponent)
             status = "imported MIDI \(url.lastPathComponent) (\(Int(bpm)) bpm)"
+        }
+    }
+
+    // MARK: full-song analyze (song A) / apply target (song B)
+
+    /// Analyze an arbitrary audio file's swing into the current .STT. Tries the
+    /// Spark service first (Demucs source separation) and falls back to on-device
+    /// analysis when remote is off or the Spark is unreachable.
+    func analyzeSong(_ url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        let data = try? Data(contentsOf: url)             // bytes to POST to the Spark
+        let samples = audio.loadMono(url: url)            // kept for the on-device fallback
+        if scoped { url.stopAccessingSecurityScopedResource() }
+        guard data != nil || samples != nil else {
+            status = "couldn't read \(url.lastPathComponent)"; return
+        }
+        runAnalysis(name: url.deletingPathExtension().lastPathComponent,
+                    filename: url.lastPathComponent, audioData: data, fallback: samples)
+    }
+
+    /// Remote-first analysis with an on-device fallback. Updates the .STT, tempo,
+    /// report, and `lastEngine` when done.
+    func runAnalysis(name: String, filename: String,
+                     audioData: Data?, fallback: (samples: [Float], sr: Int)?) {
+        let ts = timeSignature, sub = gridValid ? subdivision : 16
+        let remote = useRemote, server = serverURL
+        status = "analyzing \(name)…"
+        Task { [weak self] in
+            guard let self else { return }
+            if remote, let data = audioData {
+                do {
+                    let r = try await RemoteAnalyzer.analyze(audio: data, filename: filename, serverURL: server)
+                    self.applyAnalysis(groove: r.groove, report: r.report, name: name, engine: "Spark · \(r.engine)")
+                    return
+                } catch {
+                    self.status = "Spark unavailable (\(RemoteAnalyzer.describe(error))) — analyzing on-device…"
+                }
+            }
+            guard let a = fallback else {
+                self.status = "couldn't analyze \(name): Spark unreachable and no local audio"; return
+            }
+            let res = await Task.detached(priority: .userInitiated) {
+                SongAnalyzer.analyzeSong(a.samples, sampleRate: a.sr, timeSignature: ts, subdivision: sub)
+            }.value
+            self.applyAnalysis(groove: res.groove, report: res.report, name: name, engine: "on-device")
+        }
+    }
+
+    private func applyAnalysis(groove: Groove, report: SongReport, name: String, engine: String) {
+        tempoBPM = report.tempoBPM
+        loadGroove(groove, name: name)
+        lastReport = report
+        lastEngine = engine
+        status = String(format: "analyzed %@ — %@ · %.0f bpm · swing %.0f%% · conf %.0f%%",
+                        name, engine, report.tempoBPM, swingPercent(report.swingRatio), report.confidence * 100)
+    }
+
+    /// Set an arbitrary audio file as the apply target (song B).
+    func setRenderTarget(_ url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let t = audio.loadMono(url: url) else {
+            status = "couldn't read \(url.lastPathComponent)"; return
+        }
+        target = t
+        targetIsSong = true
+        renderTargetName = url.deletingPathExtension().lastPathComponent
+        status = "apply target set to \(renderTargetName) — Preview to hear the groove stamped on"
+    }
+
+    /// 0.5 → 0%, ~0.667 → 100% (straight … triplet swing).
+    func swingPercent(_ ratio: Double) -> Double {
+        max(0, min(150, (ratio - 0.5) / (2.0 / 3.0 - 0.5) * 100))
+    }
+
+    /// Built-in end-to-end demo: extract bundled song A's swing, show it, then
+    /// stamp it onto bundled song B. Walks the tabs + status like a guided demo.
+    func runDemo() {
+        guard let aURL = Bundle.main.url(forResource: "demoSongA", withExtension: "wav"),
+              let a = audio.loadMono(url: aURL),
+              let bURL = Bundle.main.url(forResource: "demoSongB", withExtension: "wav") else {
+            status = "demo songs missing from the bundle"; return
+        }
+        Task { [weak self] in
+            guard let self else { return }
+            await MainActor.run { self.tab = 4; self.status = "Demo ①  analyzing song A (a swung groove)…" }
+            let res = await Task.detached(priority: .userInitiated) {
+                SongAnalyzer.analyzeSong(a.samples, sampleRate: a.sr,
+                                         timeSignature: TimeSignature(4, 4), subdivision: 16)
+            }.value
+            await MainActor.run {
+                self.tempoBPM = res.report.tempoBPM
+                self.loadGroove(res.groove, name: "demoSongA")
+                self.lastReport = res.report
+                self.status = String(format: "Demo ②  extracted A’s swing — %.0f bpm · swing %.0f%% · confidence %.0f%%",
+                                     res.report.tempoBPM, self.swingPercent(res.report.swingRatio),
+                                     res.report.confidence * 100)
+            }
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            await MainActor.run { self.tab = 1 }                 // .STT full: show the extracted offsets
+            try? await Task.sleep(nanoseconds: 4_500_000_000)
+            await MainActor.run {
+                self.setRenderTarget(bURL)
+                self.tab = 4
+                self.status = "Demo ③  apply target = song B (straight)"
+            }
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            await MainActor.run {
+                self.status = "Demo ④  stamping A’s swing onto song B…"
+                self.previewPlay()
+            }
+        }
+    }
+
+    /// Headless end-to-end check (launch with SELFTEST=1): analyze every available
+    /// song through the Spark and stamp each resulting groove onto the sample drum
+    /// beat (straight_drums). Writes Documents/selftest_results.json for the Mac
+    /// test harness to read back. Bundled WAVs + any audio dropped in Documents.
+    func runRemoteSelfTest() {
+        let server = serverURL
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        guard let target = audio.loadMono("straight_drums") else {
+            status = "SELFTEST: straight_drums.wav missing from bundle"; return
+        }
+        var songs: [(name: String, url: URL)] = []
+        for r in ["amen", "demoSongA", "demoSongB"] {
+            if let u = Bundle.main.url(forResource: r, withExtension: "wav") { songs.append((r, u)) }
+        }
+        let exts: Set<String> = ["mp3", "m4a", "wav", "flac", "aif", "aiff"]
+        if let items = try? FileManager.default.contentsOfDirectory(at: docs, includingPropertiesForKeys: nil) {
+            for u in items.sorted(by: { $0.lastPathComponent < $1.lastPathComponent })
+            where exts.contains(u.pathExtension.lowercased()) {
+                songs.append((u.deletingPathExtension().lastPathComponent, u))
+            }
+        }
+        status = "SELFTEST: \(songs.count) songs → Spark → apply to straight_drums…"
+        Task { [weak self] in
+            guard let self else { return }
+            var results: [[String: Any]] = []
+            for (i, song) in songs.enumerated() {
+                self.status = "SELFTEST \(i + 1)/\(songs.count): \(song.name)…"
+                var row: [String: Any] = ["song": song.name]
+                do {
+                    let data = try Data(contentsOf: song.url)
+                    let r = try await RemoteAnalyzer.analyze(audio: data, filename: song.url.lastPathComponent,
+                                                             serverURL: server)
+                    let rendered = await Task.detached(priority: .userInitiated) {
+                        Render.grooved(target: target.samples, sampleRate: target.sr,
+                                       groove: r.groove, tempoBpm: r.report.tempoBPM, percussive: false)
+                    }.value
+                    let ok = rendered.count >= target.samples.count && r.groove.timing.count >= 16
+                    row["engine"] = r.engine
+                    row["tempoBpm"] = r.report.tempoBPM
+                    row["swingRatio"] = r.report.swingRatio
+                    row["confidence"] = r.report.confidence
+                    row["slots"] = r.groove.timing.count
+                    row["renderedSamples"] = rendered.count
+                    row["ok"] = ok
+                } catch {
+                    row["ok"] = false
+                    row["error"] = RemoteAnalyzer.describe(error)
+                }
+                results.append(row)
+            }
+            let passed = results.filter { ($0["ok"] as? Bool) == true }.count
+            let summary: [String: Any] = ["server": server, "passed": passed,
+                                          "total": results.count, "results": results]
+            if let d = try? JSONSerialization.data(withJSONObject: summary,
+                                                   options: [.prettyPrinted, .sortedKeys]) {
+                try? d.write(to: docs.appendingPathComponent("selftest_results.json"))
+            }
+            self.status = "SELFTEST done: \(passed)/\(results.count) passed → selftest_results.json"
         }
     }
 
