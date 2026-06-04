@@ -86,8 +86,12 @@ struct GenerateView: View {
     @EnvironmentObject var store: Store
     @State private var showImporter = false
     @State private var pendingKind: ImportKind = .grooveFile
-    @State private var dragStart: Double? = nil        // timing[i] captured when a bar drag begins
-    @State private var editBars = false                // Analyzed-values strip: scroll (off) vs drag-edit (on)
+    // Analyzed-values strip: one gesture — horizontal drag scrolls, vertical drag tunes a bar.
+    @State private var stripOffset: CGFloat = 0        // horizontal pan (<= 0)
+    @State private var panStart: CGFloat = 0           // stripOffset captured at pan start
+    @State private var scrolling: Bool? = nil          // nil = undecided, true = scroll, false = tune
+    @State private var editSlot: Int? = nil            // slot being tuned
+    @State private var editStart: Double = 0           // timing[slot] at tune start
     private let bfPerPoint = 350.0                      // bf per point of vertical drag (also the bar's visual scale)
     private let trackHeight: CGFloat = 90
 
@@ -151,8 +155,6 @@ struct GenerateView: View {
                         HStack {
                             Text(store.sttName).font(.headline)
                             Spacer()
-                            Button(editBars ? "Done" : "Edit") { editBars.toggle() }
-                                .buttonStyle(.bordered).font(.caption).tint(editBars ? .green : nil)
                             if !store.lastEngine.isEmpty {
                                 Text(store.lastEngine).font(.caption2)
                                     .padding(.horizontal, 6).padding(.vertical, 2)
@@ -171,55 +173,74 @@ struct GenerateView: View {
                             Text("Analyze a song (or load a groove) to populate these.")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
-                        Text(editBars
-                             ? "Drag a bar up/down to adjust its timing (+ = late, − = early), then Play current groove."
-                             : "Scroll horizontally to see all \(store.timing.count) slots; tap Edit to adjust bars.")
+                        Text("Drag a bar vertically to tune it; drag horizontally to scroll the strip.")
                             .font(.caption).foregroundStyle(.secondary)
-                        ScrollView(.horizontal, showsIndicators: true) {
-                            HStack(alignment: .top, spacing: 6) {
-                                ForEach(Array(0..<store.timing.count), id: \.self) { i in
-                                    let t = store.timing[i]
-                                    let h = min(trackHeight / 2 - 3, CGFloat(abs(t) / bfPerPoint))
-                                    let cell = VStack(spacing: 3) {
-                                        Text("\(i + 1)").font(.caption2.bold())
-                                        ZStack {
-                                            RoundedRectangle(cornerRadius: 3).fill(Color.secondary.opacity(editBars ? 0.15 : 0.08))
-                                            Rectangle().fill(Color.secondary.opacity(0.35)).frame(height: 1)
-                                            Rectangle()
-                                                .fill(t < 0 ? Color.orange : (t > 0 ? Color.blue : Color.secondary))
-                                                .frame(width: 12, height: max(2, h))
-                                                .offset(y: t >= 0 ? -h / 2 : h / 2)
-                                        }
-                                        .frame(width: 26, height: trackHeight)
-                                        Text(String(format: "%+.0f", t))
-                                            .font(.system(size: 9).monospacedDigit())
-                                            .lineLimit(1).minimumScaleFactor(0.5)
-                                        if store.velocity.indices.contains(i) {
-                                            Text("v\(Int(store.velocity[i]))")
-                                                .font(.system(size: 9).monospacedDigit()).foregroundStyle(.green)
+                        let cellW: CGFloat = 46            // 40 bar width + 6 spacing
+                        GeometryReader { geo in
+                            let n = store.timing.count
+                            let contentW = cellW * CGFloat(max(1, n))
+                            let minX = min(0, geo.size.width - contentW)
+                            ZStack(alignment: .topLeading) {
+                                Color.clear
+                                HStack(alignment: .top, spacing: 6) {
+                                    ForEach(Array(0..<n), id: \.self) { i in
+                                        let t = store.timing[i]
+                                        let h = min(trackHeight / 2 - 3, CGFloat(abs(t) / bfPerPoint))
+                                        VStack(spacing: 3) {
+                                            Text("\(i + 1)").font(.caption2.bold())
+                                            ZStack {
+                                                RoundedRectangle(cornerRadius: 3)
+                                                    .fill(Color.secondary.opacity(editSlot == i ? 0.22 : 0.08))
+                                                Rectangle().fill(Color.secondary.opacity(0.35)).frame(height: 1)
+                                                Rectangle()
+                                                    .fill(t < 0 ? Color.orange : (t > 0 ? Color.blue : Color.secondary))
+                                                    .frame(width: 12, height: max(2, h))
+                                                    .offset(y: t >= 0 ? -h / 2 : h / 2)
+                                            }
+                                            .frame(width: 26, height: trackHeight)
+                                            Text(String(format: "%+.0f", t))
+                                                .font(.system(size: 9).monospacedDigit())
                                                 .lineLimit(1).minimumScaleFactor(0.5)
+                                            if store.velocity.indices.contains(i) {
+                                                Text("v\(Int(store.velocity[i]))")
+                                                    .font(.system(size: 9).monospacedDigit()).foregroundStyle(.green)
+                                                    .lineLimit(1).minimumScaleFactor(0.5)
+                                            }
                                         }
-                                    }
-                                    .frame(width: 40)
-                                    // Only attach the drag gesture in Edit mode, so otherwise the
-                                    // ScrollView pans freely (192 per-cell gestures would block it).
-                                    if editBars {
-                                        cell.contentShape(Rectangle()).gesture(
-                                            DragGesture(minimumDistance: 2)
-                                                .onChanged { g in
-                                                    if dragStart == nil { dragStart = store.timing[i] }
-                                                    let v = clampBF(dragStart! + Double(-g.translation.height) * bfPerPoint)
-                                                    store.timing[i] = v.rounded()
-                                                }
-                                                .onEnded { _ in dragStart = nil }
-                                        )
-                                    } else {
-                                        cell
+                                        .frame(width: 40)
                                     }
                                 }
+                                .frame(width: contentW, alignment: .leading)
+                                .offset(x: stripOffset)
                             }
-                            .padding(.vertical, 4)
+                            .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
+                            .contentShape(Rectangle())
+                            .gesture(
+                                DragGesture(minimumDistance: 0)
+                                    .onChanged { g in
+                                        let w = g.translation.width, dh = g.translation.height
+                                        if scrolling == nil {
+                                            if max(abs(w), abs(dh)) < 8 { return }   // wait until direction is clear
+                                            if abs(w) > abs(dh) {
+                                                scrolling = true; panStart = stripOffset
+                                            } else {
+                                                scrolling = false
+                                                let s = max(0, min(n - 1, Int((g.startLocation.x - stripOffset) / cellW)))
+                                                editSlot = s; editStart = store.timing[s]
+                                            }
+                                        }
+                                        if scrolling == true {
+                                            stripOffset = max(minX, min(0, panStart + w))
+                                        } else if scrolling == false, let s = editSlot {
+                                            store.timing[s] = clampBF(editStart + Double(-dh) * bfPerPoint).rounded()
+                                        }
+                                    }
+                                    .onEnded { _ in scrolling = nil; editSlot = nil }
+                            )
                         }
+                        .frame(height: trackHeight + 50)
+                        .clipped()
+                        .onChange(of: store.timing.count) { _ in stripOffset = 0 }
                     }
                 }
 
