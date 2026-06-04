@@ -58,7 +58,14 @@ final class AudioEngine: ObservableObject {
         if let dst = buf.floatChannelData?[0] {
             samples.withUnsafeBufferPointer { dst.update(from: $0.baseAddress!, count: samples.count) }
         }
+        // Reconnect the player to the mixer with THIS buffer's (mono) format.
+        // The mixer upmixes mono->stereo for output; without matching the
+        // player's output format to the buffer, scheduleBuffer asserts on a
+        // channel-count mismatch and crashes.
         player.stop()
+        engine.disconnectNodeOutput(player)
+        engine.connect(player, to: engine.mainMixerNode, format: fmt)
+        if !engine.isRunning { try? engine.start() }
         player.scheduleBuffer(buf, at: nil, options: .interrupts)
         player.play()
         nowPlaying = label
