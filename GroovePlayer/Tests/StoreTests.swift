@@ -123,7 +123,9 @@ final class StoreTests: XCTestCase {
         XCTAssertTrue(s.targetIsSong)
         XCTAssertFalse(s.renderTargetName.isEmpty)
 
-        // Analyze song A (async) → wait for the report.
+        // Analyze song A (async) → wait for the report. Force on-device so the test
+        // is deterministic and doesn't depend on the Spark (unreachable in CI).
+        s.useRemote = false
         s.analyzeSong(songA)
         waitUntil(timeout: 30) { s.lastReport != nil }
         XCTAssertNotNil(s.lastReport)
