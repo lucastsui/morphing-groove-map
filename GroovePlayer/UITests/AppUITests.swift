@@ -36,7 +36,6 @@ final class AppUITests: XCTestCase {
 
         // Generate: extraction + audio + export.
         tapTab("Generate")
-        tapIfHittable("Analyze Amen", timeout: 4)
         tapIfHittable("Play current groove")
         tapIfHittable("Play target")
         tapIfHittable("Export .STT")

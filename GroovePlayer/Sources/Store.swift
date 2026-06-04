@@ -82,6 +82,7 @@ final class Store: ObservableObject {
         if UserDefaults.standard.object(forKey: "gp.useRemote") != nil {
             useRemote = UserDefaults.standard.bool(forKey: "gp.useRemote")
         }
+        seedBundledSongs()
         target = audio.loadMono("straight_drums")
         resizeLanes()
         // Seed a light swing so the editor/overview show real data (off-beats
@@ -92,6 +93,19 @@ final class Store: ObservableObject {
         slotName[0] = "No Swing"; slotGroove[0] = straightGroove()
         slotName[74] = "Random Groove.STT"; slotGroove[74] = currentGroove()
         slotName[127] = "Amen Break.STT"; slotGroove[127] = currentGroove()
+    }
+
+    /// Copy bundled sample songs into Documents so they show in the file picker
+    /// alongside the user's own songs (so they're analyzed via "Analyze song…").
+    private func seedBundledSongs() {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let seeds = [(resource: "amen", filename: "Amen Break.wav")]
+        for s in seeds {
+            let dest = docs.appendingPathComponent(s.filename)
+            guard !FileManager.default.fileExists(atPath: dest.path),
+                  let src = Bundle.main.url(forResource: s.resource, withExtension: "wav") else { continue }
+            try? FileManager.default.copyItem(at: src, to: dest)
+        }
     }
 
     var noteUnit: NoteUnit { NoteUnit.all[min(max(noteUnitIndex, 0), NoteUnit.all.count - 1)] }
@@ -187,26 +201,23 @@ final class Store: ObservableObject {
         status = "playing \(renderTargetName)"
     }
 
-    // MARK: extract (Generate tab)
-
-    func analyzeAmen() {
-        guard let a = audio.loadMono("amen") else { status = "amen.wav missing"; return }
-        let g = Onset.extractGroove(a.samples, sampleRate: a.sr, bpm: tempoBPM,
-                                    timeSignature: timeSignature,
-                                    subdivision: gridValid ? subdivision : beatResolution, unit: .bf)
-        loadGroove(g, name: "Amen Break")
-        status = "analyzed amen.wav into \(sttName) (timing + velocity)"
-    }
+    // MARK: MIDI import (Generate tab)
 
     func importMIDI(_ url: URL) {
         access(url) { data in
-            let (_, bpm) = try MIDIImport.parse(data)
-            let g = try MIDIImport.extractGroove(from: data, timeSignature: timeSignature,
-                                                 subdivision: gridValid ? subdivision : beatResolution,
-                                                 unit: .bf, bpm: bpm)
+            let (notes, bpm) = try MIDIImport.parse(data)
+            // Exact single-bar extraction (musical domain, auto-grid, no averaging/rejection).
+            let g = try MIDIImport.extractGrooveExact(from: data, timeSignature: timeSignature, bpm: bpm)
+            // swing ratio from off-beat note positions (same convention as the audio analyzer)
+            let offbeats = notes.map { ($0.timeSeconds * bpm / 60).truncatingRemainder(dividingBy: 1.0) }
+                                .filter { $0 > 0.4 && $0 < 0.8 }.sorted()
+            let swing = offbeats.isEmpty ? 0.5 : offbeats[offbeats.count / 2]
             tempoBPM = bpm
             loadGroove(g, name: url.deletingPathExtension().lastPathComponent)
-            status = "imported MIDI \(url.lastPathComponent) (\(Int(bpm)) bpm)"
+            lastReport = SongReport(tempoBPM: bpm, swingRatio: swing, confidence: 1.0,
+                                    beatsDetected: timeSignature.numerator, onsetsUsed: notes.count)
+            lastEngine = "MIDI"
+            status = "imported MIDI \(url.lastPathComponent) — \(notes.count) notes, \(Int(bpm)) bpm"
         }
     }
 
@@ -332,7 +343,7 @@ final class Store: ObservableObject {
             status = "SELFTEST: straight_drums.wav missing from bundle"; return
         }
         var songs: [(name: String, url: URL)] = []
-        for r in ["amen", "demoSongA", "demoSongB"] {
+        for r in ["demoSongA", "demoSongB"] {   // amen is seeded into Documents and picked up below
             if let u = Bundle.main.url(forResource: r, withExtension: "wav") { songs.append((r, u)) }
         }
         let exts: Set<String> = ["mp3", "m4a", "wav", "flac", "aif", "aiff"]

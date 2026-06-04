@@ -11,11 +11,14 @@ let package = Package(
     products: [
         .library(name: "MGMKit", targets: ["MGMKit"]),
         .executable(name: "MGMValidate", targets: ["MGMValidate"]),
+        .executable(name: "MIDICompare", targets: ["MIDICompare"]),
     ],
     targets: [
         .target(name: "MGMKit"),
         // Runs with the CLI toolchain (no Xcode/XCTest needed): `swift run MGMValidate`.
         .executableTarget(name: "MGMValidate", dependencies: ["MGMKit"]),
+        // Compare template vs exact MIDI->groove on a file: `swift run MIDICompare <file.mid>`.
+        .executableTarget(name: "MIDICompare", dependencies: ["MGMKit"]),
         // XCTest target -- used when opened in Xcode.
         .testTarget(name: "MGMKitTests", dependencies: ["MGMKit"]),
     ]

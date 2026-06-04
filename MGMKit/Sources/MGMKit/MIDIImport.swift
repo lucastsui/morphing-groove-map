@@ -110,4 +110,85 @@ public enum MIDIImport {
                       sampleRate: unit == .samples ? sampleRate : nil,
                       timing: timing, velocity: velocity)
     }
+
+    // MARK: Exact single-bar extraction
+
+    /// Exact extraction of ONE bar: place each onset on a fine grid at its true
+    /// offset, keep the exact MIDI velocity, with NO cross-bar averaging and NO
+    /// off-grid rejection. Works in the musical (beat) domain, so it's tempo-exact
+    /// at constant tempo. Lossless for a monophonic onset stream; genuinely
+    /// simultaneous hits still collapse to one value per slot (the model's limit).
+    public static func extractGrooveExact(from data: Data, timeSignature ts: TimeSignature,
+                                          subdivision fixedSub: Int? = nil,
+                                          bpm overrideBpm: Double? = nil,
+                                          bar: Int? = nil) throws -> Groove {
+        let (notes, fileBpm) = try parse(data)
+        let bpm = overrideBpm ?? fileBpm
+        let beatsPerBar = Double(ts.numerator) * 4.0 / Double(ts.denominator)
+        let positions = notes.map { $0.timeSeconds * bpm / 60.0 }          // onset positions, in beats
+
+        func emptyGroove(_ sub: Int) -> Groove {
+            let n = slotCount(ts, subdivision: sub)
+            return Groove(timeSignature: ts, subdivision: sub, unit: .bf,
+                          timing: [Double](repeating: 0, count: n),
+                          velocity: [Double](repeating: 0, count: n))
+        }
+        guard let firstOnset = positions.min() else { return emptyGroove(fixedSub ?? 16) }
+
+        // default to the bar with the most onsets (most representative single bar)
+        let chosenBar: Int
+        if let bar { chosenBar = bar }
+        else {
+            var counts: [Int: Int] = [:]
+            for p in positions where p >= 0 { counts[Int(p / beatsPerBar), default: 0] += 1 }
+            chosenBar = counts.max { $0.value < $1.value }?.key ?? Int(firstOnset / beatsPerBar)
+        }
+        let barStart = Double(chosenBar) * beatsPerBar
+        let inBar: [(pos: Double, vel: Int)] = zip(positions, notes).compactMap { p, n in
+            let local = p - barStart
+            return (local >= 0 && local < beatsPerBar) ? (local, n.velocity) : nil
+        }
+        guard !inBar.isEmpty else { return emptyGroove(fixedSub ?? 16) }
+
+        let sub = fixedSub ?? autoSubdivision(forOnsetsInBeats: inBar.map(\.pos),
+                                              timeSignature: ts, beatsPerBar: beatsPerBar)
+        let nSlots = slotCount(ts, subdivision: sub)
+        let beatsPerSlot = beatsPerBar / Double(nSlots)
+
+        var tSum = [Double](repeating: 0, count: nSlots)
+        var vSum = [Double](repeating: 0, count: nSlots)
+        var cnt = [Int](repeating: 0, count: nSlots)
+        for (pos, vel) in inBar {
+            let slot = (Int((pos / beatsPerSlot).rounded()) % nSlots + nSlots) % nSlots
+            tSum[slot] += (pos - Double(slot) * beatsPerSlot) * Double(bfPerBeat)
+            vSum[slot] += Double(vel)
+            cnt[slot] += 1
+        }
+        let timing = (0..<nSlots).map { cnt[$0] > 0 ? tSum[$0] / Double(cnt[$0]) : 0 }
+        let velocity = (0..<nSlots).map { cnt[$0] > 0 ? vSum[$0] / Double(cnt[$0]) : 0 }
+        return Groove(timeSignature: ts, subdivision: sub, unit: .bf, timing: timing, velocity: velocity)
+    }
+
+    /// Smallest grid (multiple of the beat unit, ≥ 16 slots) on which no two onsets
+    /// share a slot — covering straight (×2) and triplet (×3) families. Falls back
+    /// to the finest candidate if the onsets can't be fully separated.
+    static func autoSubdivision(forOnsetsInBeats positions: [Double],
+                                timeSignature ts: TimeSignature, beatsPerBar: Double) -> Int {
+        let den = ts.denominator
+        let candidates = [4, 6, 8, 12, 16, 24, 32, 48]
+            .map { $0 * den }
+            .filter { ts.numerator * ($0 / den) >= minimumResolution }
+            .sorted()
+        for sub in candidates {
+            let nSlots = ts.numerator * (sub / den)
+            let beatsPerSlot = beatsPerBar / Double(nSlots)
+            var used = Set<Int>(); var ok = true
+            for p in positions {
+                let slot = (Int((p / beatsPerSlot).rounded()) % nSlots + nSlots) % nSlots
+                if !used.insert(slot).inserted { ok = false; break }
+            }
+            if ok { return sub }
+        }
+        return candidates.last ?? 16
+    }
 }

@@ -1,6 +1,6 @@
 # Status Quo — Morphing Groove Map (handoff for context pickup)
 
-_Last updated: 2026-06-04 (Spark-assisted remote analysis built, integrated, verified live, committed + pushed). This file is a self-handoff so a fresh context can resume fast._
+_Last updated: 2026-06-04 (Spark analysis + exact MIDI extraction + Generate-tab groove editor, all committed + pushed). This file is a self-handoff so a fresh context can resume fast._
 
 ## What this project is now
 A **pure-Swift / Xcode-only iPad app** ("Groove Player") that captures the swing of a
@@ -20,6 +20,14 @@ The dense-mix limitation is fixed by offloading analysis to the user's **DGX Spa
 - **ATS gotcha**: `Info.plist` uses **`NSAllowsArbitraryLoads` ALONE** — do NOT also add `NSAllowsLocalNetworking`, or iOS ignores arbitrary-loads and blocks the Tailscale (100.x) HTTP call.
 - **Verified live in the sim**: *Fly Me to the Moon* → **120 bpm** via Spark (on-device read it as 60), stamped onto `straight_drums` and played. The Mac-side harness `tools/test_spark_analyze.py` passed all 8 songs against the service.
 - **Headless app check**: launch with `SIMCTL_CHILD_SELFTEST=1` → analyzes bundled WAVs + any audio in Documents, applies each to `straight_drums`, writes `Documents/selftest_results.json`.
+
+## MIDI groove extraction (exact) + Generate-tab groove editor — NEW
+- **One combined import button**: Generate tab → **"Analyze song / MIDI file"** accepts audio AND MIDI and routes by extension — `.mid`/`.midi` → `Store.importMIDI` (on-device), else → `Store.analyzeSong` (Spark). The standalone "MIDI file" button was removed.
+- **Exact MIDI extraction**: `importMIDI` now calls **`MIDIImport.extractGrooveExact`** — beat-domain, the **densest single bar**, auto-picks subdivision so each onset gets its own slot, NO cross-bar averaging, NO half-slot rejection. Tempo-exact at constant tempo; lossless for a monophonic onset stream. Genuinely simultaneous hits still collapse to one slot (the one-value-per-slot model limit). The older averaging `extractGroove` (template) stays in MGMKit but the app no longer uses it.
+  - Consequence: a dense polyphonic drum bar auto-grids to the **192-slot** cap — faithful but sparse. A/B the two extractors on a file: `swift run --package-path MGMKit MIDICompare <file.mid> [bar]`.
+- **Analyzed values panel** (Generate tab, below Preview): shows the current groove — name + engine badge (`Spark · …` / `on-device` / `MIDI`), summary (tempo, swing %, ratio, slots, confidence), and a **horizontally-scrollable strip of per-slot bipolar bars** (up = late/blue, down = early/orange) with bf value + velocity. **Edit toggle**: OFF → the strip scrolls (the per-cell drag gestures would otherwise block the ScrollView); ON → drag a bar up/down to adjust `store.timing[i]` (clamped ±196608 bf). "Play current groove" renders the edited groove onto `straight_drums`.
+- **Bundled-song seeding**: `Store.seedBundledSongs()` copies `amen.wav` → `Documents/Amen Break.wav` on launch so it's pickable like the user's songs; the old on-device "Analyze Amen" button was removed.
+- **Sample MIDI**: the Google **Groove MIDI Dataset** (CC BY 4.0, MIDI-only, downloaded to `/tmp/gmd`) supplied swung test files. `Jazz 102bpm.mid`, `Jazz 125bpm.mid`, `Funk 80bpm.mid` are copied into the **sim's app Documents** (NOT the repo). Verified in the emulator: Jazz imports exact (192 slots, MIDI badge), strip scrolls to the far-end hits (values match the `MIDICompare` exact output).
 
 ## Layout
 ```
@@ -54,12 +62,12 @@ run_tests.sh, TESTING.md, README.md, .github/workflows/ci.yml
 - Built-in demo (`SIMCTL_CHILD_DEMO=1`) runs end-to-end: analyze bundled song A → show → apply to song B → play. No crashes.
 - The 4 user songs are preloaded into the simulator app's Documents (see below) and selectable in the pickers.
 
-## Git state  ✅ committed + pushed this session
+## Git state  ✅ committed + pushed
 - Branch **`main`**; remote `origin` = `github.com/lucastsui/morphing-groove-map`.
-- Previously `origin/main` was at `8471947` (the rewrite + base test suite). The previously-uncommitted **on-device full-song feature** (`SongAnalyzer`, built-in demo, Generate file-picker fix, Files-sharing, target-sample swap) **and** the new **Spark-assisted remote analysis** were committed together (commingled across `Store.swift`/`SongAnalyzer.swift`, so a clean split wasn't possible) and **pushed to `origin/main`**.
-- New since the rewrite: `RemoteAnalyzer.swift`, `tools/test_spark_analyze.py`, `SongAnalyzer.swift` (+ `SongReport` public init), `SongAnalyzerTests.swift`, `demoSongA/B.wav`, `straight_drums.wav`. Deleted: `straight_target.wav`.
+- History: `8471947` (rewrite + base tests) → **`781cc23`** (Spark-assisted remote analysis + the previously-uncommitted on-device full-song feature, committed together) → **latest** (exact MIDI extraction, the combined "Analyze song / MIDI file" button, the Generate-tab groove editor = Analyzed-values panel + bipolar draggable bars + scroll/Edit toggle, Amen-in-picker seeding, and the `MIDICompare` CLI). All **pushed to `origin/main`**.
+- Key files since `781cc23`: `MGMKit/Sources/MGMKit/MIDIImport.swift` (+`extractGrooveExact`), `MGMKit/Sources/MIDICompare/` (new), `GroovePlayer/Sources/MGMTabs.swift`, `Store.swift`, `MGMKit/Package.swift`.
 
-## Recent work (this session, all uncommitted)
+## Earlier work (committed in 781cc23)
 1. Full-song analysis (`SongAnalyzer`) + arbitrary-audio import (Generate: "Analyze song…" / "Apply to song…") + percussive-retime render. Decisions made by user: **on-device best-effort** analysis, **percussive re-time** apply, **one representative bar** output.
 2. Built-in demo (`Store.runDemo()`, purple button on Generate, or `DEMO=1` env).
 3. Bug fixes found by manual emulator QA: removed dead **Edit** on .STT full; **.MGM Edit** now gates slot add/remove; **Play target** status names the real target; **Generate file pickers were all broken** (4 stacked `.fileImporter`s → consolidated to one Bool+enum importer) — then a second fix (optional state cleared by dismiss before completion → switched to non-cleared enum).
