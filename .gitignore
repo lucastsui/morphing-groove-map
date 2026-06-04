@@ -22,3 +22,9 @@ examples/_val_*.wav
 .DS_Store
 # Rendered demo outputs
 examples/OUT_*.wav
+
+# Swift / Xcode
+ios/MGMKit/.build/
+ios/**/DerivedData/
+*.xcuserstate
+xcuserdata/
