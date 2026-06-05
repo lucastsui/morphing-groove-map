@@ -42,23 +42,6 @@ struct WelcomeView: View {
                     }
                 }
 
-                GroupBox("Remote analysis (Spark)") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Toggle("Use Spark for full-song analysis", isOn: $store.useRemote)
-                        HStack {
-                            Text("Server").frame(width: 80, alignment: .leading)
-                            TextField("http://host:8001", text: $store.serverURL)
-                                .textFieldStyle(.roundedBorder)
-                                .autocorrectionDisabled()
-                                .textInputAutocapitalization(.never)
-                                .accessibilityIdentifier("serverURL")
-                        }
-                        Text("Uploads the song to your Spark for Demucs source separation; "
-                             + "falls back to on-device analysis if it's unreachable.")
-                            .font(.caption2).foregroundStyle(.secondary)
-                    }
-                }
-
                 Text(store.status).font(.footnote).foregroundStyle(.secondary)
             }
             .padding(28)

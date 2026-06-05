@@ -68,20 +68,17 @@ final class Store: ObservableObject {
     @Published var clip: ClipGroove?               // lossless event-list source of truth (.agr import)
     @Published var tab = Int(ProcessInfo.processInfo.environment["TAB"] ?? "0") ?? 0
 
-    // Remote analysis (Spark) settings — persisted across launches.
-    @Published var useRemote = true { didSet { UserDefaults.standard.set(useRemote, forKey: "gp.useRemote") } }
-    @Published var serverURL = "http://100.73.106.98:8001" { didSet { UserDefaults.standard.set(serverURL, forKey: "gp.serverURL") } }
+    // Spark remote analysis: ON by default with the Spark's Tailscale IP hardcoded —
+    // no settings UI, no persistence (it's a demo; security/config are out of scope).
+    // `useRemote` stays a var so the CI test can force the on-device fallback path.
+    var useRemote = true
+    let serverURL = "http://100.73.106.98:8001"
 
     let audio: AudioEngine
     private var target: (samples: [Float], sr: Int)?
 
     init(audio: AudioEngine) {
         self.audio = audio
-        // Restore persisted Spark settings (didSet does not fire inside init).
-        if let s = UserDefaults.standard.string(forKey: "gp.serverURL") { serverURL = s }
-        if UserDefaults.standard.object(forKey: "gp.useRemote") != nil {
-            useRemote = UserDefaults.standard.bool(forKey: "gp.useRemote")
-        }
         seedBundledSongs()
         target = audio.loadMono("straight_drums")
         resizeLanes()
