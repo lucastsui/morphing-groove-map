@@ -120,6 +120,64 @@ struct STTFullView: View {
 
 // MARK: - .STT beats (single-beat editor)
 
+// MARK: - Tall symlog per-beat slider
+
+/// A tall vertical slider for the selected beat's offset. Symlog scale (offsets
+/// cluster near 0, so small ones get most of the travel), bipolar (up = late/blue,
+/// down = early/orange), with the magnitude ladder labelled down the side. Drag
+/// anywhere on the track to set the offset.
+struct BeatSlider: View {
+    @EnvironmentObject var store: Store
+    private let trackH: CGFloat = 300
+    private let trackW: CGFloat = 40
+    private static let ticks: [(String, Double)] = [
+        ("+196k", 196608), ("+64k", 65536), ("+16k", 16384), ("+4k", 4096),
+        ("+1k", 1024), ("+256", 256), ("+64", 64), ("0", 0),
+        ("−64", -64), ("−256", -256), ("−1k", -1024), ("−4k", -4096),
+        ("−16k", -16384), ("−64k", -65536), ("−196k", -196608),
+    ]
+
+    var body: some View {
+        let halfH = trackH / 2
+        let t = store.selectedFBU
+        let thumbY = halfH - CGFloat(symlogNorm(t)) * halfH
+        HStack(alignment: .top, spacing: 8) {
+            ZStack(alignment: .top) {
+                RoundedRectangle(cornerRadius: 6).fill(Color.secondary.opacity(0.10))
+                    .frame(width: trackW, height: trackH)
+                ForEach(BeatSlider.ticks, id: \.1) { tick in
+                    Rectangle().fill(Color.secondary.opacity(tick.1 == 0 ? 0.5 : 0.18))
+                        .frame(width: trackW, height: tick.1 == 0 ? 1.5 : 1)
+                        .offset(y: halfH - CGFloat(symlogNorm(tick.1)) * halfH - 0.5)
+                }
+                Rectangle()
+                    .fill(t < 0 ? Color.orange : (t > 0 ? Color.blue : Color.clear))
+                    .frame(width: trackW, height: abs(thumbY - halfH))
+                    .offset(y: min(thumbY, halfH))
+                Capsule().fill(t < 0 ? Color.orange : Color.blue)
+                    .frame(width: trackW + 10, height: 7)
+                    .offset(y: thumbY - 3.5)
+            }
+            .frame(width: trackW, height: trackH, alignment: .top)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0).onChanged { g in
+                    let y = min(max(0, g.location.y), trackH)
+                    store.selectedFBU = clampBF(symlogInv(Double((halfH - y) / halfH))).rounded()
+                }
+            )
+            .accessibilityIdentifier("beatSlider")
+            ZStack(alignment: .topLeading) {
+                ForEach(BeatSlider.ticks, id: \.1) { tick in
+                    Text(tick.0).font(.system(size: 9).monospacedDigit()).foregroundStyle(.secondary)
+                        .offset(y: halfH - CGFloat(symlogNorm(tick.1)) * halfH - 6)
+                }
+            }
+            .frame(width: 46, height: trackH, alignment: .topLeading)
+        }
+    }
+}
+
 struct STTBeatsView: View {
     @EnvironmentObject var store: Store
     @State private var showLoader = false
@@ -139,6 +197,10 @@ struct STTBeatsView: View {
                     readout(String(format: "%.2f ms", store.selectedMs))
                     readout(store.selectedNoteLabel)
                 }
+
+                Divider()
+                Text("Tune offset (drag the slider)").font(.headline)
+                BeatSlider()
 
                 Divider()
                 Text("Adjust Current Beat").font(.headline)

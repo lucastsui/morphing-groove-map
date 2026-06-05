@@ -205,3 +205,21 @@ struct SlotsTimeline: View {
         }
     }
 }
+
+// MARK: - Symlog scale for offset bars / sliders
+
+// Offsets cluster near 0 (≈90% under 2000 of a 196608-fbu beat), so a linear bar
+// wastes its range and saturates early. Map the magnitude through asinh: smooth,
+// sign-preserving, invertible — small offsets get most of the travel, large ones
+// compress. ±bfMax (one beat) maps to ±1. `k` sets the near-zero linear zone.
+private let symlogK = 64.0     // near-zero linear zone (≈ the teammate's smallest ±64 tick); tune to taste
+private let symlogMaxNorm = asinh(Double(bfMax) / symlogK)
+
+/// fbu offset (−bfMax…+bfMax) → normalized symlog position in [−1, 1].
+func symlogNorm(_ t: Double) -> Double {
+    max(-1, min(1, asinh(t / symlogK) / symlogMaxNorm))
+}
+/// Inverse: normalized position in [−1, 1] → fbu offset.
+func symlogInv(_ f: Double) -> Double {
+    symlogK * sinh(max(-1, min(1, f)) * symlogMaxNorm)
+}

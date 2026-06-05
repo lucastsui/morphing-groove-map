@@ -92,8 +92,7 @@ struct GenerateView: View {
     @State private var scrolling: Bool? = nil          // nil = undecided, true = scroll, false = tune
     @State private var editSlot: Int? = nil            // slot being tuned
     @State private var editStart: Double = 0           // timing[slot] at tune start
-    private let bfPerPoint = 350.0                      // bf per point of vertical drag (also the bar's visual scale)
-    private let trackHeight: CGFloat = 90
+    private let trackHeight: CGFloat = 150             // taller — offsets cluster near 0 (symlog height/drag below)
 
     var body: some View {
         ScrollView {
@@ -185,7 +184,7 @@ struct GenerateView: View {
                                 HStack(alignment: .top, spacing: 6) {
                                     ForEach(Array(0..<n), id: \.self) { i in
                                         let t = store.timing[i]
-                                        let h = min(trackHeight / 2 - 3, CGFloat(abs(t) / bfPerPoint))
+                                        let h = CGFloat(abs(symlogNorm(t))) * (trackHeight / 2 - 3)   // symlog
                                         VStack(spacing: 3) {
                                             Text("\(i + 1)").font(.caption2.bold())
                                             ZStack {
@@ -232,7 +231,8 @@ struct GenerateView: View {
                                         if scrolling == true {
                                             stripOffset = max(minX, min(0, panStart + w))
                                         } else if scrolling == false, let s = editSlot {
-                                            store.timing[s] = clampBF(editStart + Double(-dh) * bfPerPoint).rounded()
+                                            let f = max(-1, min(1, symlogNorm(editStart) + Double(-dh) / Double(trackHeight / 2 - 3)))
+                                            store.timing[s] = clampBF(symlogInv(f)).rounded()
                                         }
                                     }
                                     .onEnded { _ in scrolling = nil; editSlot = nil }
