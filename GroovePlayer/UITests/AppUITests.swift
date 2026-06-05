@@ -96,7 +96,9 @@ final class AppUITests: XCTestCase {
     func testMGMShowsDefaultSlots() {
         tapTab(".MGM")
         XCTAssertTrue(app.staticTexts["Slot files"].waitForExistence(timeout: 8))
-        XCTAssertTrue(app.staticTexts["No Swing"].firstMatch.exists)
-        XCTAssertTrue(app.staticTexts["Amen Break.STT"].firstMatch.exists)
+        // wait for the slot-row labels too — on a loaded CI runner the list's
+        // a11y nodes lag the header, so a bare `.exists` here flakes.
+        XCTAssertTrue(app.staticTexts["No Swing"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Amen Break.STT"].firstMatch.waitForExistence(timeout: 5))
     }
 }
