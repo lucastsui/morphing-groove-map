@@ -47,7 +47,6 @@ final class AppUITests: XCTestCase {
 
         // .STT beats: edit, nudge with several step buttons, select a beat, preview.
         tapTab(".STT beats")
-        tapIfHittable("Edit")
         for label in ["+1024", "+128", "+16", "+1", "0", "+10", "+.1", "+1/4", "+1/2", "+1"] {
             tapIfHittable(label)
         }
@@ -86,13 +85,11 @@ final class AppUITests: XCTestCase {
         XCTAssertTrue(containsText("7-bit").waitForExistence(timeout: 5))
     }
 
-    func testEditEnablesStepButtons() {
+    func testStepButtonsAlwaysEnabled() {
         tapTab(".STT beats")
         let plus128 = app.buttons["+128"].firstMatch
         XCTAssertTrue(plus128.waitForExistence(timeout: 8))
-        XCTAssertFalse(plus128.isEnabled)            // disabled until Edit
-        app.buttons["Edit"].firstMatch.tap()
-        XCTAssertTrue(plus128.isEnabled)
+        XCTAssertTrue(plus128.isEnabled)             // .STT beats is always editable (no Edit gate)
         app.buttons["beat-2"].firstMatch.tap()       // selecting a beat shouldn't crash
     }
 

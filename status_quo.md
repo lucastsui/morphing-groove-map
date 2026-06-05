@@ -1,6 +1,6 @@
 # Status Quo — Morphing Groove Map (handoff for context pickup)
 
-_Last updated: 2026-06-04 (Spark analysis + exact MIDI extraction + Generate-tab groove editor + lossless ClipGroove/.agr import, all committed + pushed). This file is a self-handoff so a fresh context can resume fast._
+_Last updated: 2026-06-04 (Spark analysis + exact MIDI extraction + Generate-tab groove editor + lossless ClipGroove/.agr import + always-editable .STT beats, all committed + pushed). This file is a self-handoff so a fresh context can resume fast._
 
 ## What this project is now
 A **pure-Swift / Xcode-only iPad app** ("Groove Player") that captures the swing of a
@@ -54,7 +54,7 @@ run_tests.sh, TESTING.md, README.md, .github/workflows/ci.yml
 
 ## Key concepts
 - **bf == fbu** (the spec's "fractional beat unit"): one beat = `196608 = 2¹⁶×3`. The ×3 makes triplets exact. `3072 fbu = 15.63 ms @60bpm = 1/64 beat`.
-- **5 tabs:** Welcome (MIDI 1.0/2.0 toggle + project settings) · .STT full (display) · .STT beats (single-beat editor) · .MGM (128 slots) · Generate (export/import + full-song analyze/apply + demo).
+- **5 tabs:** Welcome (MIDI 1.0/2.0 toggle + project settings) · .STT full (display) · **.STT beats** (single-beat editor — **always editable**, Edit button removed; offset typeable in all three units: fbu, ms, and a **note-unit count** [`Store.selectedNoteCount` = offset ÷ the selected note unit], the dropdown picks the unit) · .MGM (128 slots) · Generate (export/import + full-song analyze/apply + demo).
 - **Apply target sample** is now `straight_drums.wav` (a 16-bit straight drum loop). "Play target" plays it; "Preview" stamps the current groove onto it.
 
 ## Verified state (all green)
@@ -72,8 +72,8 @@ The per-slot `Groove` is a feel template — it can't hold polyphony, note durat
 
 ## Git state  ✅ committed + pushed
 - Branch **`main`**; remote `origin` = `github.com/lucastsui/morphing-groove-map`.
-- History: `8471947` (rewrite) → `781cc23` (Spark remote analysis + on-device full-song) → `0096f2f` (exact MIDI extraction + combined import button + Generate-tab groove editor + `MIDICompare`) → `7752889` (direction-aware strip gesture: horizontal = scroll, vertical = tune; replaced the Edit toggle) → `22fc0a7` (CI fix: force on-device in `testAnalyzeSongAndApplyToTarget`) → **latest** (lossless `ClipGroove` + `.agr` import). All **pushed to `origin/main`**.
-- Key files (this batch): `MGMKit/Sources/MGMKit/ClipGroove.swift` (new), `MGMKit/Tests/MGMKitTests/AGRImportTests.swift` (new), `GroovePlayer/Sources/Store.swift`, `MGMTabs.swift`, `STTTabs.swift`.
+- History: `8471947` (rewrite) → `781cc23` (Spark remote analysis + on-device full-song) → `0096f2f` (exact MIDI extraction + combined import button + Generate-tab groove editor + `MIDICompare`) → `7752889` (direction-aware strip gesture) → `22fc0a7` (CI fix) → `cbf9628` (lossless `ClipGroove` + `.agr` import) → **latest** (`.STT beats` always-editable + typeable note-count box; Edit button removed). All **pushed to `origin/main`**.
+- Key files (latest): `GroovePlayer/Sources/STTTabs.swift` (.STT beats editor), `Store.swift` (`selectedNoteCount`; dropped `sttEditable`), `UITests/AppUITests.swift` (Edit-gating test → always-enabled).
 
 ## Earlier work (committed in 781cc23)
 1. Full-song analysis (`SongAnalyzer`) + arbitrary-audio import (Generate: "Analyze song…" / "Apply to song…") + percussive-retime render. Decisions made by user: **on-device best-effort** analysis, **percussive re-time** apply, **one representative bar** output.

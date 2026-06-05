@@ -45,7 +45,6 @@ final class Store: ObservableObject {
 
     // MARK: current .STT (the single timing template being edited)
     @Published var sttName = "Amen Break"
-    @Published var sttEditable = false
     @Published var timing: [Double] = []        // per-slot offset, fbu (== bf)
     @Published var velocity: [Double] = []       // per-slot velocity, 0...maxVelocity
     @Published var gate: [Double] = []           // per-slot gate length, fbu
@@ -163,6 +162,12 @@ final class Store: ObservableObject {
         set { selectedFBU = msToBF(newValue, bpm: tempoBPM) }
     }
     var selectedNoteLabel: String { bfToNoteValue(selectedFBU) }
+    /// The offset as a count of the current note unit, so the "note" box is
+    /// directly typeable like fbu/ms (6144 fbu ÷ 64th[3072] = 2.0).
+    var selectedNoteCount: Double {
+        get { noteUnit.fbu != 0 ? selectedFBU / noteUnit.fbu : 0 }
+        set { selectedFBU = clampBF(newValue * noteUnit.fbu) }
+    }
 
     /// Nudge the selected beat's offset by `deltaFBU` (used by the fbu row).
     func stepFBU(_ deltaFBU: Double) { selectedFBU = clampBF(selectedFBU + deltaFBU) }

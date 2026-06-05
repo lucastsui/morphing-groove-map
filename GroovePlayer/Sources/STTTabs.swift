@@ -127,7 +127,7 @@ struct STTBeatsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                FileHeader(name: $store.sttName, ext: ".STT", editable: $store.sttEditable,
+                FileHeader(name: $store.sttName, ext: ".STT", editable: .constant(false), showEdit: false,
                            onLoad: { showLoader = true }, onSave: { store.saveSTT() })
                 ProjectSettings()
                 Divider()
@@ -152,12 +152,10 @@ struct STTBeatsView: View {
                         Text("ms").font(.caption2).foregroundStyle(.secondary)
                     }
                     VStack(spacing: 2) {
-                        Text(store.selectedNoteLabel).font(.callout.monospacedDigit())
-                            .padding(6).background(RoundedRectangle(cornerRadius: 6).fill(Color.secondary.opacity(0.12)))
-                        Text("note").font(.caption2).foregroundStyle(.secondary)
+                        DoubleBox(value: Binding(get: { store.selectedNoteCount }, set: { store.selectedNoteCount = $0 }), width: 90)
+                        Text("× \(store.noteUnit.name)").font(.caption2).foregroundStyle(.secondary)
                     }
                 }
-                .disabled(!store.sttEditable)
 
                 VStack(alignment: .leading, spacing: 8) {
                     StepRow(label: "fbu", steps: [("−1024", -1024), ("−128", -128), ("−16", -16), ("−1", -1),
@@ -172,7 +170,6 @@ struct STTBeatsView: View {
                         }.pickerStyle(.menu)
                     }
                 }
-                .disabled(!store.sttEditable)
 
                 Divider()
                 HStack {
