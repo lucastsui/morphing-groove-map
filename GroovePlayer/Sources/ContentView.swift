@@ -185,14 +185,15 @@ struct SlotsTimeline: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .bottom, spacing: 1) {
-                    ForEach(0..<128, id: \.self) { s in
-                        let filled = store.slotGroove[s] != nil
-                        Rectangle()
-                            .fill(filled ? Color.accentColor : Color.secondary.opacity(0.3))
-                            .frame(width: filled ? 5 : 2, height: filled ? 42 : 16)
-                    }
+            // Spread the 128 slots across the full width (equal share each) so the
+            // filled bars line up with the 0–127 tick labels below.
+            HStack(alignment: .bottom, spacing: 0) {
+                ForEach(0..<128, id: \.self) { s in
+                    let filled = store.slotGroove[s] != nil
+                    Rectangle()
+                        .fill(filled ? Color.accentColor : Color.secondary.opacity(0.3))
+                        .frame(width: filled ? 4 : 2, height: filled ? 42 : 16)
+                        .frame(maxWidth: .infinity)
                 }
             }
             HStack {
