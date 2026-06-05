@@ -8,6 +8,7 @@ import UniformTypeIdentifiers
 // Custom document types for the file pickers (module-wide).
 let sttType = UTType(filenameExtension: "stt") ?? .data
 let mgmType = UTType(filenameExtension: "mgm") ?? .data
+let agrType = UTType(filenameExtension: "agr") ?? .data   // Ableton groove
 
 // MARK: - Welcome
 

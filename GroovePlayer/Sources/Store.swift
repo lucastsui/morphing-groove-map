@@ -65,7 +65,8 @@ final class Store: ObservableObject {
     @Published var renderTargetName = "straight drums"
     @Published var targetIsSong = false
     @Published var lastReport: SongReport?
-    @Published var lastEngine = ""                 // "Spark · htdemucs+librosa" or "on-device"
+    @Published var lastEngine = ""                 // "Spark · htdemucs+librosa" / "on-device" / "MIDI" / "AGR"
+    @Published var clip: ClipGroove?               // lossless event-list source of truth (.agr import)
     @Published var tab = Int(ProcessInfo.processInfo.environment["TAB"] ?? "0") ?? 0
 
     // Remote analysis (Spark) settings — persisted across launches.
@@ -218,6 +219,25 @@ final class Store: ObservableObject {
                                     beatsDetected: timeSignature.numerator, onsetsUsed: notes.count)
             lastEngine = "MIDI"
             status = "imported MIDI \(url.lastPathComponent) — \(notes.count) notes, \(Int(bpm)) bpm"
+        }
+    }
+
+    /// Import an Ableton .agr groove: parse to the lossless ClipGroove (kept in
+    /// `clip`) and load its per-slot projection into the bar editor.
+    func importAGR(_ url: URL) {
+        access(url) { data in
+            let parsed = try AGRImport.parse(data)
+            loadGroove(parsed.groove(), name: url.deletingPathExtension().lastPathComponent)
+            self.clip = parsed                                  // lossless source of truth (set after loadGroove clears it)
+            let offb = parsed.notes.filter(\.enabled)
+                             .map { $0.startBeats.truncatingRemainder(dividingBy: 1.0) }
+                             .filter { $0 > 0.4 && $0 < 0.8 }.sorted()
+            let swing = offb.isEmpty ? 0.5 : offb[offb.count / 2]
+            lastReport = SongReport(tempoBPM: tempoBPM, swingRatio: swing, confidence: 1.0,
+                                    beatsDetected: timeSignature.numerator, onsetsUsed: parsed.notes.count)
+            let np = parsed.pitches.count
+            lastEngine = "AGR · \(np) pitch\(np == 1 ? "" : "es")"
+            status = "imported .agr \(url.lastPathComponent) — \(parsed.notes.count) notes, \(np) pitch(es), \(parsed.bars) bar(s)"
         }
     }
 
@@ -457,6 +477,7 @@ final class Store: ObservableObject {
         gate = g.gate ?? [Double](repeating: 0, count: g.timing.count)
         selectedBeat = 0
         sttName = name
+        clip = nil                          // any plain-groove load drops the lossless .agr source
     }
 
     private func access(_ url: URL, _ body: (Data) throws -> Void) {

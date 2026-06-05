@@ -12,7 +12,7 @@ private enum ImportKind {
     var types: [UTType] {
         switch self {
         case .grooveFile: return [sttType, mgmType]
-        case .analyzeOrMIDI: return [.audio, .midi]   // one button handles songs AND MIDI
+        case .analyzeOrMIDI: return [.audio, .midi, agrType]   // songs, MIDI, and Ableton .agr grooves
         case .targetSong: return [.audio]
         }
     }
@@ -122,7 +122,7 @@ struct GenerateView: View {
                 GroupBox("Full song — analyze A → apply to B") {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Button { pendingKind = .analyzeOrMIDI; showImporter = true } label: { Label("Analyze song / MIDI file", systemImage: "waveform") }
+                            Button { pendingKind = .analyzeOrMIDI; showImporter = true } label: { Label("Analyze song / MIDI / .agr", systemImage: "waveform") }
                             Button { pendingKind = .targetSong; showImporter = true } label: { Label("Apply to song…", systemImage: "music.note") }
                         }.buttonStyle(.bordered)
                         Text("Apply target: \(store.renderTargetName)")
@@ -254,8 +254,11 @@ struct GenerateView: View {
             switch pendingKind {
             case .grooveFile: u.pathExtension.lowercased() == "mgm" ? store.loadMGM(u) : store.loadSTT(u)
             case .analyzeOrMIDI:
-                let ext = u.pathExtension.lowercased()
-                if ext == "mid" || ext == "midi" { store.importMIDI(u) } else { store.analyzeSong(u) }
+                switch u.pathExtension.lowercased() {
+                case "mid", "midi": store.importMIDI(u)
+                case "agr":         store.importAGR(u)
+                default:            store.analyzeSong(u)
+                }
             case .targetSong:  store.setRenderTarget(u)
             }
         }
