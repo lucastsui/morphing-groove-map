@@ -63,7 +63,7 @@ run_tests.sh, TESTING.md, README.md, .github/workflows/ci.yml
 - **Apply target sample** is now `straight_drums.wav` (a 16-bit straight drum loop). "Play target" plays it; "Preview" stamps the current groove onto it.
 
 ## Verified state (all green)
-- `./run_tests.sh` → **ALL TIERS PASSED**: Tier-0 MGMValidate (~31 checks), Tier-1 MGMKit **52 tests**, Tier-2 Store **10 tests**, Tier-3 XCUITest **6 tests** (incl. crash-smoke).
+- `./run_tests.sh` → **ALL TIERS PASSED**: Tier-0 MGMValidate (~31 checks), Tier-1 MGMKit **52 tests**, Tier-2 Store **11 tests**, Tier-3 XCUITest **6 tests** (incl. crash-smoke).
 - Built-in demo (`SIMCTL_CHILD_DEMO=1`) runs end-to-end: analyze bundled song A → show → apply to song B → play. No crashes.
 - The 4 user songs are preloaded into the simulator app's Documents (see below) and selectable in the pickers.
 
@@ -77,7 +77,7 @@ The per-slot `Groove` is a feel template — it can't hold polyphony, note durat
 
 ## Git state  ✅ committed + pushed
 - Branch **`main`**; remote `origin` = `github.com/lucastsui/morphing-groove-map`.
-- History: `8471947` (rewrite) → `781cc23` (Spark remote analysis + on-device full-song) → `0096f2f` (exact MIDI extraction + combined import button + Generate-tab groove editor + `MIDICompare`) → `7752889` (direction-aware strip gesture) → `22fc0a7` (CI fix) → `cbf9628` (lossless `ClipGroove` + `.agr` import) → `eb61306` (`.STT beats` always-editable + typeable note-count box; Edit button removed) → `8c75b8d` (.MGM slot-timeline full-width alignment — **teammate Lucas**) → `a61bece` (symlog offset bars + tall `.STT beats` `BeatSlider`, rebased on the teammate's commit) → `2ae4b98` (fix flaky `testMGMShowsDefaultSlots`) → **latest** (extraction-accuracy test + slider re-tune `k=6` [±6k = 2/3–3/4] + snap-to-grid). All **pushed to `origin/main`**.
+- History: `8471947` (rewrite) → `781cc23` (Spark remote analysis + on-device full-song) → `0096f2f` (exact MIDI extraction + combined import button + Generate-tab groove editor + `MIDICompare`) → `7752889` (direction-aware strip gesture) → `22fc0a7` (CI fix) → `cbf9628` (lossless `ClipGroove` + `.agr` import) → `eb61306` (`.STT beats` always-editable + typeable note-count box; Edit button removed) → `8c75b8d` (.MGM slot-timeline full-width alignment — **teammate Lucas**) → `a61bece` (symlog offset bars + tall `.STT beats` `BeatSlider`, rebased on the teammate's commit) → `2ae4b98` (fix flaky `testMGMShowsDefaultSlots`) → `5e28453` (extraction-accuracy test + slider re-tune `k=6` [±6k = 2/3–3/4] + snap-to-grid) → **latest** (crash fix: guard `assignCurrentToSlot`/`saveMGM` against an invalid grid → no `slicesPerBeat` precondition crash; `testAssignToSlotGuardsInvalidGrid`). All **pushed to `origin/main`**.
 - Key files (latest): `MGMKit/Tests/MGMKitTests/ExtractionAccuracyTests.swift` (new — synthetic round-trip, max 6.24 fbu error), `ContentView.swift` (`symlogK` 64→6), `Store.swift` (`snapEnabled`/`snapStep`/`snapped`), `STTTabs.swift` + `MGMTabs.swift` (snap toggle + drag snapping).
 
 ## Earlier work (committed in 781cc23)

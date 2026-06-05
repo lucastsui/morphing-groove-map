@@ -464,6 +464,7 @@ final class Store: ObservableObject {
     }
 
     func saveMGM() {
+        guard gridValid else { status = "invalid grid; can't save"; return }
         do {
             var doc = try MGMDocument(timeSignature: timeSignature,
                                       subdivision: gridValid ? subdivision : beatResolution, unit: .bf)
@@ -477,6 +478,9 @@ final class Store: ObservableObject {
     /// Put the current .STT into an .mgm slot (the "+" / add-to-slot action).
     func assignCurrentToSlot(_ pos: Int) {
         guard (0...127).contains(pos) else { status = "slot must be 0–127"; return }
+        // An invalid grid yields a groove whose subdivision % denominator != 0, which
+        // hard-crashes (slicesPerBeat precondition) the moment it's validated/saved.
+        guard gridValid else { status = "invalid grid: adjust time signature / beat resolution"; return }
         slotGroove[pos] = currentGroove()
         slotName[pos] = "\(sttName).STT"
         status = "added \(sttName).STT to slot \(pos)"

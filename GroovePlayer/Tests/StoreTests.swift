@@ -34,6 +34,14 @@ final class StoreTests: XCTestCase {
         XCTAssertEqual(s.snapped(1500), 1024)        // 1500/1024 rounds to 1
     }
 
+    func testAssignToSlotGuardsInvalidGrid() {
+        let s = makeStore()
+        s.beatResolution = 18                         // subdivision 18, 18 % 4 != 0 -> invalid grid
+        XCTAssertFalse(s.gridValid)
+        s.assignCurrentToSlot(50)                     // would store a groove that crashes on validate()
+        XCTAssertNil(s.slotGroove[50], "must not store an invalid-subdivision groove into a slot")
+    }
+
     func testStepFunctions() {
         let s = makeStore()
         s.tempoBPM = 60; s.selectedBeat = 0; s.selectedFBU = 0
