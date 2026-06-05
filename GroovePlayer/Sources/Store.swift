@@ -112,7 +112,9 @@ final class Store: ObservableObject {
 
     // MARK: grid helpers
 
-    var timeSignature: TimeSignature { TimeSignature(tsNumerator, tsDenominator) }
+    // Clamp to >= 1 so a degenerate field entry (0 or negative numerator/denominator)
+    // can never produce a mod-by-zero in slicesPerBeat or a degenerate time signature.
+    var timeSignature: TimeSignature { TimeSignature(max(1, tsNumerator), max(1, tsDenominator)) }
 
     /// Engine subdivision so that slotCount(ts, subdivision) == beatResolution.
     var subdivision: Int { max(1, beatResolution * tsDenominator / max(1, tsNumerator)) }
@@ -126,6 +128,7 @@ final class Store: ObservableObject {
 
     /// Resize the per-slot lanes to `beatResolution`, preserving existing values.
     func resizeLanes() {
+        if beatResolution < 1 { beatResolution = 1 }   // never allocate a negative/zero-count lane (a trap)
         func fit(_ a: [Double], _ fill: Double) -> [Double] {
             if a.count == beatResolution { return a }
             if a.count > beatResolution { return Array(a.prefix(beatResolution)) }
@@ -140,12 +143,12 @@ final class Store: ObservableObject {
     // MARK: groove construction
 
     func currentGroove() -> Groove {
-        Groove(timeSignature: timeSignature, subdivision: gridValid ? subdivision : beatResolution,
+        Groove(timeSignature: timeSignature, subdivision: gridValid ? subdivision : timeSignature.denominator,
                unit: .bf, timing: timing, velocity: velocity, gate: gate)
     }
 
     func straightGroove() -> Groove {
-        Groove(timeSignature: timeSignature, subdivision: gridValid ? subdivision : beatResolution,
+        Groove(timeSignature: timeSignature, subdivision: gridValid ? subdivision : timeSignature.denominator,
                unit: .bf, timing: [Double](repeating: 0, count: beatResolution),
                velocity: [Double](repeating: 0, count: beatResolution),
                gate: [Double](repeating: 0, count: beatResolution))
@@ -464,11 +467,17 @@ final class Store: ObservableObject {
     }
 
     func saveMGM() {
-        guard gridValid else { status = "invalid grid; can't save"; return }
+        // Build the doc to match the STORED slots' grid (a slot may have been assigned
+        // under a different grid than the editor currently shows), so a grid change
+        // since assignment does not make every setSlot throw incompatibleWithMap.
+        let ref = slotGroove[slotGroove.keys.sorted().first ?? 0]
         do {
-            var doc = try MGMDocument(timeSignature: timeSignature,
-                                      subdivision: gridValid ? subdivision : beatResolution, unit: .bf)
-            for (pos, g) in slotGroove where pos != 0 { try doc.setSlot(pos, g) }
+            var doc = try MGMDocument(timeSignature: ref?.timeSignature ?? timeSignature,
+                                      subdivision: ref?.subdivision ?? subdivision, unit: .bf)
+            for pos in slotGroove.keys.sorted() where pos != 0 {
+                do { try doc.setSlot(pos, slotGroove[pos]!) }
+                catch { status = "slot \(pos) has an incompatible grid — can't save .mgm"; return }
+            }
             let url = documents("\(safe(mgmName)).mgm")
             try MGMIO.saveMGM(doc, to: url)
             status = "saved \(url.lastPathComponent) to Documents"

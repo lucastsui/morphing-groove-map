@@ -42,6 +42,29 @@ final class StoreTests: XCTestCase {
         XCTAssertNil(s.slotGroove[50], "must not store an invalid-subdivision groove into a slot")
     }
 
+    func testNegativeBeatResolutionClampedNoCrash() {
+        let s = makeStore()
+        s.beatResolution = -5                          // unclamped IntBox could feed a negative array count
+        s.resizeLanes()                                // must clamp instead of trapping on [Double](count: negative)
+        XCTAssertGreaterThanOrEqual(s.beatResolution, 1)
+        XCTAssertEqual(s.timing.count, s.beatResolution)
+    }
+
+    func testTimeSignatureClampsDegenerateInputs() {
+        let s = makeStore()
+        s.tsNumerator = 0; s.tsDenominator = 0         // would mod-by-zero in slicesPerBeat downstream
+        XCTAssertGreaterThanOrEqual(s.timeSignature.numerator, 1)
+        XCTAssertGreaterThanOrEqual(s.timeSignature.denominator, 1)
+    }
+
+    func testCurrentGrooveFallbackSubdivisionIsValid() {
+        let s = makeStore()
+        s.beatResolution = 18                          // invalid grid (18 % 4 != 0)
+        XCTAssertFalse(s.gridValid)
+        let g = s.currentGroove()                      // fallback must be grid-valid (divisible) so slicesPerBeat can't crash
+        XCTAssertEqual(g.subdivision % s.timeSignature.denominator, 0)
+    }
+
     func testStepFunctions() {
         let s = makeStore()
         s.tempoBPM = 60; s.selectedBeat = 0; s.selectedFBU = 0

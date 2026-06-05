@@ -230,7 +230,8 @@ struct GenerateView: View {
                                         }
                                         if scrolling == true {
                                             stripOffset = max(minX, min(0, panStart + w))
-                                        } else if scrolling == false, let s = editSlot {
+                                        } else if scrolling == false, let s = editSlot, s < store.timing.count {
+                                            // bounds-recheck s: timing can shrink mid-drag (e.g. an async analysis completes and calls loadGroove)
                                             let f = max(-1, min(1, symlogNorm(editStart) + Double(-dh) / Double(trackHeight / 2 - 3)))
                                             store.timing[s] = clampBF(store.snapped(symlogInv(f))).rounded()
                                         }
