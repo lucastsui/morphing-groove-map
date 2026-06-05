@@ -212,7 +212,13 @@ struct SlotsTimeline: View {
 // wastes its range and saturates early. Map the magnitude through asinh: smooth,
 // sign-preserving, invertible — small offsets get most of the travel, large ones
 // compress. ±bfMax (one beat) maps to ±1. `k` sets the near-zero linear zone.
-private let symlogK = 64.0     // near-zero linear zone (≈ the teammate's smallest ±64 tick); tune to taste
+//
+// `k` is the one-line tuning knob for how much travel the musically-interesting
+// central region gets. Target (team spec): the ±6144 fbu window (≈ a 32nd note)
+// should fill roughly 2/3–3/4 of the TOTAL slider travel. At k=6,
+// symlogNorm(6144) = asinh(6144/6)/asinh(196608/6) = asinh(1024)/asinh(32768)
+// ≈ 7.625/11.090 ≈ 0.688 — inside [0.667, 0.75]. (k=64 gave only ≈0.60.)
+private let symlogK = 6.0       // see above: tunes the ±6144 / 32nd-note central region to ~2/3–3/4 of travel
 private let symlogMaxNorm = asinh(Double(bfMax) / symlogK)
 
 /// fbu offset (−bfMax…+bfMax) → normalized symlog position in [−1, 1].

@@ -93,6 +93,15 @@ final class AppUITests: XCTestCase {
         app.buttons["beat-2"].firstMatch.tap()       // selecting a beat shouldn't crash
     }
 
+    func testSnapToggleFlips() {
+        tapTab(".STT beats")
+        let snap = app.switches["snapToggle"].firstMatch
+        XCTAssertTrue(snap.waitForExistence(timeout: 8), "snap toggle not found")
+        let before = snap.value as? String
+        snap.tap()                                   // tap the element by its a11y frame
+        XCTAssertNotEqual(snap.value as? String, before, "snap toggle did not flip")
+    }
+
     func testMGMShowsDefaultSlots() {
         tapTab(".MGM")
         XCTAssertTrue(app.staticTexts["Slot files"].waitForExistence(timeout: 8))

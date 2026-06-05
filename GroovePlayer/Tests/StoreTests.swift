@@ -19,6 +19,21 @@ final class StoreTests: XCTestCase {
         XCTAssertEqual(s.selectedNoteLabel, "1/64 beat")
     }
 
+    func testSnapped() {
+        let s = makeStore()
+        s.snapEnabled = false
+        XCTAssertEqual(s.snapped(200), 200)          // off: unchanged
+        s.snapEnabled = true
+        s.snapStep = 128
+        XCTAssertEqual(s.snapped(200), 256)          // nearest multiple of 128
+        XCTAssertEqual(s.snapped(3050), 3072)        // 24 * 128
+        XCTAssertEqual(s.snapped(-200), -256)
+        s.snapStep = 16
+        XCTAssertEqual(s.snapped(100), 96)           // 6 * 16
+        s.snapStep = 1024
+        XCTAssertEqual(s.snapped(1500), 1024)        // 1500/1024 rounds to 1
+    }
+
     func testStepFunctions() {
         let s = makeStore()
         s.tempoBPM = 60; s.selectedBeat = 0; s.selectedFBU = 0

@@ -176,6 +176,17 @@ final class Store: ObservableObject {
     /// Nudge by a fraction of the selected note unit (notes row).
     func stepNote(_ fraction: Double) { selectedFBU = clampBF(selectedFBU + fraction * noteUnit.fbu) }
 
+    // MARK: snap-to-grid (drag handlers only)
+
+    @Published var snapEnabled = false
+    @Published var snapStep = 128       // fbu; variable 16…1024
+
+    /// Snap a (continuous) offset to the nearest multiple of `snapStep` when
+    /// snapping is on. Used only by the drag gestures, not typed/step values.
+    func snapped(_ v: Double) -> Double {
+        (snapEnabled && snapStep > 0) ? (v / Double(snapStep)).rounded() * Double(snapStep) : v
+    }
+
     // MARK: per-beat display (for the .STT full overview)
 
     func beatTriplet(_ i: Int) -> (fbu: Double, ms: Double, note: String) {

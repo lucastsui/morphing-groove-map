@@ -1,6 +1,6 @@
 # Status Quo — Morphing Groove Map (handoff for context pickup)
 
-_Last updated: 2026-06-04 (Spark analysis + exact MIDI extraction + Generate-tab groove editor + lossless ClipGroove/.agr import + always-editable .STT beats + symlog offset bars/slider, all committed + pushed). This file is a self-handoff so a fresh context can resume fast._
+_Last updated: 2026-06-04 (… + symlog offset bars/slider + extraction-accuracy test + ±6k slider scale + snap-to-grid, all committed + pushed). This file is a self-handoff so a fresh context can resume fast._
 
 ## What this project is now
 A **pure-Swift / Xcode-only iPad app** ("Groove Player") that captures the swing of a
@@ -25,9 +25,14 @@ The dense-mix limitation is fixed by offloading analysis to the user's **DGX Spa
 - **One combined import button**: Generate tab → **"Analyze song / MIDI / .agr"** accepts audio, MIDI, and Ableton `.agr`, routing by extension — `.mid`/`.midi` → `Store.importMIDI` (on-device), `.agr` → `Store.importAGR`, else → `Store.analyzeSong` (Spark). The standalone "MIDI file" button was removed.
 - **Exact MIDI extraction**: `importMIDI` now calls **`MIDIImport.extractGrooveExact`** — beat-domain, the **densest single bar**, auto-picks subdivision so each onset gets its own slot, NO cross-bar averaging, NO half-slot rejection. Tempo-exact at constant tempo; lossless for a monophonic onset stream. Genuinely simultaneous hits still collapse to one slot (the one-value-per-slot model limit). The older averaging `extractGroove` (template) stays in MGMKit but the app no longer uses it.
   - Consequence: a dense polyphonic drum bar auto-grids to the **192-slot** cap — faithful but sparse. A/B the two extractors on a file: `swift run --package-path MGMKit MIDICompare <file.mid> [bar]`.
-- **Analyzed values panel** (Generate tab, below Preview): shows the current groove — name + engine badge (`Spark · …` / `on-device` / `MIDI` / `AGR`), summary (tempo, swing %, ratio, slots, confidence), and a **taller, manually-panned strip of per-slot bipolar bars** (up = late/blue, down = early/orange) with bf value + velocity, drawn on a **symlog scale** (offsets cluster near 0 — ≈90% under 2000 of a 196608 beat — so small ones stay visible and large ones compress instead of saturating; `symlogNorm`/`symlogInv` in `ContentView.swift`, asinh-based, `k=64`). **One direction-aware gesture** (no Edit toggle): the first ~8 px of a drag picks direction — **horizontal pans/scrolls** the strip, **vertical tunes** the bar under the finger (`store.timing[i]`, clamped ±196608 bf, mapped through the same symlog). "Play current groove" renders the edited groove onto `straight_drums`.
+- **Analyzed values panel** (Generate tab, below Preview): shows the current groove — name + engine badge (`Spark · …` / `on-device` / `MIDI` / `AGR`), summary (tempo, swing %, ratio, slots, confidence), and a **taller, manually-panned strip of per-slot bipolar bars** (up = late/blue, down = early/orange) with bf value + velocity, drawn on a **symlog scale** (offsets cluster near 0 — ≈90% under 2000 of a 196608 beat — so small ones stay visible and large ones compress instead of saturating; `symlogNorm`/`symlogInv` in `ContentView.swift`, asinh-based, `k=6` — tuned so ±6144 fbu [a 32nd note] fills ~2/3–3/4 of the travel). **One direction-aware gesture** (no Edit toggle): the first ~8 px of a drag picks direction — **horizontal pans/scrolls** the strip, **vertical tunes** the bar under the finger (`store.timing[i]`, clamped ±196608 bf, mapped through the same symlog). "Play current groove" renders the edited groove onto `straight_drums`.
 - **Bundled-song seeding**: `Store.seedBundledSongs()` copies `amen.wav` → `Documents/Amen Break.wav` on launch so it's pickable like the user's songs; the old on-device "Analyze Amen" button was removed.
 - **Sample MIDI**: the Google **Groove MIDI Dataset** (CC BY 4.0, MIDI-only, downloaded to `/tmp/gmd`) supplied swung test files. `Jazz 102bpm.mid`, `Jazz 125bpm.mid`, `Funk 80bpm.mid` are copied into the **sim's app Documents** (NOT the repo). Verified in the emulator: Jazz imports exact (192 slots, MIDI badge), strip scrolls to the far-end hits (values match the `MIDICompare` exact output).
+
+## Extraction accuracy + ±6k slider scale + snap — NEW
+- **Extraction-accuracy harness**: `MGMKit/Tests/MGMKitTests/ExtractionAccuracyTests.swift` — synthetic round-trip (render known percussive transients → run `Onset.extractGroove` → diff vs the known bf offsets/velocities). Measured **max timing 6.24 fbu (0.016 ms), mean 3.03; velocity max 0.50/127; 10/10 hits** — ~300× under the 5 ms (= 1966 fbu @120bpm) bar. **Clean-room number** (isolated hits); the extractor's flux peak can drift ~8 ms on *closely-spaced* hits, so dense real audio is looser. Gotcha it encodes: `extractGroove` folds onset times INCLUDING the lead-in (a 0.25 s / 2-slot lead shifts the folded lane by +2 slots — compare at the shifted slot).
+- **Slider/bar scale**: `symlogK` 64→**6** so ±6144 fbu (a 32nd note) fills ~2/3–3/4 of the travel (`symlogNorm(6144)=0.6875`); `k` is the one-line knob.
+- **Snap-to-grid**: `Store.snapEnabled`/`snapStep` (16–1024, default 128) + `snapped()`; a snap **toggle + step picker** by the `.STT beats` slider; the slider AND Generate-bar **drag** handlers snap to multiples of the step (typed values / step buttons stay exact). Tests: `StoreTests.testSnapped`, `AppUITests.testSnapToggleFlips` (taps the toggle by a11y id — confirms it's interactive).
 
 ## Layout
 ```
@@ -41,7 +46,7 @@ MGMKit/Sources/MGMKit/
   SongAnalyzer.swift FULL-SONG analysis: median-filter HPSS + tempo/beat-track + fold→one bar + confidence
   Library.swift      load bundled groove_library.json
 MGMKit/Sources/MGMValidate/main.swift   no-Xcode CLI checks (Tier-0 smoke)
-MGMKit/Tests/MGMKitTests/   MGMKitTests + EngineGapTests + SongAnalyzerTests  (48 tests)
+MGMKit/Tests/MGMKitTests/   MGMKitTests + EngineGapTests + SongAnalyzerTests + AGRImportTests + ExtractionAccuracyTests  (52 tests)
 GroovePlayer/Sources/
   GroovePlayerApp.swift, ContentView.swift (5-tab TabView + shared components/charts)
   STTTabs.swift (Welcome / .STT full / .STT beats), MGMTabs.swift (.MGM / Generate)
@@ -58,7 +63,7 @@ run_tests.sh, TESTING.md, README.md, .github/workflows/ci.yml
 - **Apply target sample** is now `straight_drums.wav` (a 16-bit straight drum loop). "Play target" plays it; "Preview" stamps the current groove onto it.
 
 ## Verified state (all green)
-- `./run_tests.sh` → **ALL TIERS PASSED**: Tier-0 MGMValidate (~31 checks), Tier-1 MGMKit **48 tests**, Tier-2 Store **9 tests**, Tier-3 XCUITest **5 tests** (incl. crash-smoke).
+- `./run_tests.sh` → **ALL TIERS PASSED**: Tier-0 MGMValidate (~31 checks), Tier-1 MGMKit **52 tests**, Tier-2 Store **10 tests**, Tier-3 XCUITest **6 tests** (incl. crash-smoke).
 - Built-in demo (`SIMCTL_CHILD_DEMO=1`) runs end-to-end: analyze bundled song A → show → apply to song B → play. No crashes.
 - The 4 user songs are preloaded into the simulator app's Documents (see below) and selectable in the pickers.
 
@@ -72,8 +77,8 @@ The per-slot `Groove` is a feel template — it can't hold polyphony, note durat
 
 ## Git state  ✅ committed + pushed
 - Branch **`main`**; remote `origin` = `github.com/lucastsui/morphing-groove-map`.
-- History: `8471947` (rewrite) → `781cc23` (Spark remote analysis + on-device full-song) → `0096f2f` (exact MIDI extraction + combined import button + Generate-tab groove editor + `MIDICompare`) → `7752889` (direction-aware strip gesture) → `22fc0a7` (CI fix) → `cbf9628` (lossless `ClipGroove` + `.agr` import) → `eb61306` (`.STT beats` always-editable + typeable note-count box; Edit button removed) → `8c75b8d` (.MGM slot-timeline full-width alignment — **teammate Lucas**) → **latest** (symlog offset bars + tall `.STT beats` `BeatSlider`; rebased onto the teammate's commit). All **pushed to `origin/main`**.
-- Key files (latest): `GroovePlayer/Sources/ContentView.swift` (`symlogNorm`/`symlogInv`), `MGMTabs.swift` (symlog Analyzed-values bars), `STTTabs.swift` (`BeatSlider`).
+- History: `8471947` (rewrite) → `781cc23` (Spark remote analysis + on-device full-song) → `0096f2f` (exact MIDI extraction + combined import button + Generate-tab groove editor + `MIDICompare`) → `7752889` (direction-aware strip gesture) → `22fc0a7` (CI fix) → `cbf9628` (lossless `ClipGroove` + `.agr` import) → `eb61306` (`.STT beats` always-editable + typeable note-count box; Edit button removed) → `8c75b8d` (.MGM slot-timeline full-width alignment — **teammate Lucas**) → `a61bece` (symlog offset bars + tall `.STT beats` `BeatSlider`, rebased on the teammate's commit) → `2ae4b98` (fix flaky `testMGMShowsDefaultSlots`) → **latest** (extraction-accuracy test + slider re-tune `k=6` [±6k = 2/3–3/4] + snap-to-grid). All **pushed to `origin/main`**.
+- Key files (latest): `MGMKit/Tests/MGMKitTests/ExtractionAccuracyTests.swift` (new — synthetic round-trip, max 6.24 fbu error), `ContentView.swift` (`symlogK` 64→6), `Store.swift` (`snapEnabled`/`snapStep`/`snapped`), `STTTabs.swift` + `MGMTabs.swift` (snap toggle + drag snapping).
 
 ## Earlier work (committed in 781cc23)
 1. Full-song analysis (`SongAnalyzer`) + arbitrary-audio import (Generate: "Analyze song…" / "Apply to song…") + percussive-retime render. Decisions made by user: **on-device best-effort** analysis, **percussive re-time** apply, **one representative bar** output.

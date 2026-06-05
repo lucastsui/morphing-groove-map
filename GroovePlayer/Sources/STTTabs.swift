@@ -163,7 +163,7 @@ struct BeatSlider: View {
             .gesture(
                 DragGesture(minimumDistance: 0).onChanged { g in
                     let y = min(max(0, g.location.y), trackH)
-                    store.selectedFBU = clampBF(symlogInv(Double((halfH - y) / halfH))).rounded()
+                    store.selectedFBU = clampBF(store.snapped(symlogInv(Double((halfH - y) / halfH)))).rounded()
                 }
             )
             .accessibilityIdentifier("beatSlider")
@@ -201,6 +201,21 @@ struct STTBeatsView: View {
                 Divider()
                 Text("Tune offset (drag the slider)").font(.headline)
                 BeatSlider()
+                HStack(spacing: 12) {
+                    Toggle("Snap", isOn: $store.snapEnabled)
+                        .toggleStyle(.switch)
+                        .fixedSize()
+                        .accessibilityIdentifier("snapToggle")
+                    Picker("", selection: $store.snapStep) {
+                        ForEach([16, 32, 64, 128, 256, 512, 1024], id: \.self) { v in
+                            Text(String(v)).tag(v)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .disabled(!store.snapEnabled)
+                    .accessibilityIdentifier("snapStep")
+                    Text("fbu").font(.caption2).foregroundStyle(.secondary)
+                }
 
                 Divider()
                 Text("Adjust Current Beat").font(.headline)

@@ -232,7 +232,7 @@ struct GenerateView: View {
                                             stripOffset = max(minX, min(0, panStart + w))
                                         } else if scrolling == false, let s = editSlot {
                                             let f = max(-1, min(1, symlogNorm(editStart) + Double(-dh) / Double(trackHeight / 2 - 3)))
-                                            store.timing[s] = clampBF(symlogInv(f)).rounded()
+                                            store.timing[s] = clampBF(store.snapped(symlogInv(f))).rounded()
                                         }
                                     }
                                     .onEnded { _ in scrolling = nil; editSlot = nil }
